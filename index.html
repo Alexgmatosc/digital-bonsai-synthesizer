@@ -3,11 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Digital Specimen // Bonsai Zen Bio-Simulator (ASCII Hi-Res)</title>
+  <title>Digital Specimen // Three.js WebGL ASCII Bonsai Bio-Simulator</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
   <style>
     body {
       background-color: #020305;
@@ -18,38 +19,15 @@
       -webkit-font-smoothing: antialiased;
     }
 
-    /* Subtle CRT Scanlines and vignette */
     .crt-overlay {
       pointer-events: none;
-      background: radial-gradient(circle at center, transparent 58%, rgba(1, 3, 8, 0.85) 100%),
-                  linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.28) 50%);
+      background: radial-gradient(circle at center, transparent 60%, rgba(1, 3, 8, 0.85) 100%),
+                  linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.24) 50%);
       background-size: 100% 100%, 100% 3px;
     }
 
-    .glow-cyan {
-      text-shadow: 0 0 8px rgba(55, 236, 196, 0.7), 0 0 18px rgba(52, 192, 237, 0.4);
-    }
-
-    /* Custom range slider styling */
-    input[type=range] {
-      -webkit-appearance: none;
-      background: rgba(25, 45, 62, 0.7);
-      height: 4px;
-      border-radius: 2px;
-      outline: none;
-    }
-    input[type=range]::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      width: 13px;
-      height: 13px;
-      border-radius: 2px;
-      background: #37ecc4;
-      box-shadow: 0 0 8px #37ecc4;
-      cursor: pointer;
-    }
-
     .cyber-panel {
-      background: rgba(5, 13, 21, 0.75);
+      background: rgba(5, 13, 21, 0.78);
       border: 1px solid rgba(30, 68, 94, 0.65);
       backdrop-filter: blur(6px);
     }
@@ -64,89 +42,68 @@
       color: #e1f5fe !important;
       box-shadow: 0 0 10px rgba(55, 236, 196, 0.35);
     }
-    .canvas-prune {
-      cursor: crosshair !important;
+
+    .speed-btn.active {
+      background: rgba(55, 236, 196, 0.25) !important;
+      border-color: #37ecc4 !important;
+      color: #37ecc4 !important;
     }
-    .canvas-pinch {
-      cursor: cell !important;
-    }
+
+    .canvas-prune { cursor: crosshair !important; }
+    .canvas-pinch { cursor: cell !important; }
   </style>
 </head>
 <body class="w-screen h-screen relative flex flex-col justify-between p-2.5 md:p-4 overflow-hidden bg-[#020305]">
 
-  <!-- Canvas Graphic Layer (100% Unobstructed Central Area) -->
-  <div class="absolute inset-0 z-0">
-    <canvas id="bioCanvas" class="w-full h-full block"></canvas>
-  </div>
+  <!-- Three.js WebGL ASCII Projection Canvas (100% Unobstructed Central Space) -->
+  <div id="canvasContainer" class="absolute inset-0 z-0"></div>
 
-  <!-- CRT Visual Filters -->
+  <!-- Subtle CRT Scanlines -->
   <div class="crt-overlay absolute inset-0 z-10 pointer-events-none"></div>
 
-  <!-- MINIMAL TOP BAR: Specimen Status & Season Telemetry (Never overlaps the tree) -->
+  <!-- MINIMAL TOP BAR: Never overlaps the Bonsai -->
   <header class="relative z-20 flex flex-wrap justify-between items-center text-xs text-[#6194b8] tracking-wider gap-2 pointer-events-none">
-    <!-- Left Pill: Specimen & Season Phase -->
     <div class="cyber-panel px-3 py-1.5 rounded border-l-2 border-l-[#37ecc4] flex items-center gap-4 pointer-events-auto">
       <div class="flex items-center gap-2">
-        <span class="inline-block w-2 h-2 rounded-full bg-[#37ecc4] animate-pulse"></span>
+        <span id="liveDot" class="inline-block w-2 h-2 rounded-full bg-[#37ecc4] animate-pulse"></span>
         <span id="specimenHeader" class="text-xs md:text-sm font-bold text-[#e1f5fe]">ACER_PALMATUM #842</span>
       </div>
       <div class="hidden sm:flex items-center gap-3 text-[11px] text-[#71a5c7] font-mono border-l border-[#163247] pl-3">
         <span>SEMILLA: <b id="seedDisplay" class="text-[#37ecc4]">0x84A3F2</b></span>
-        <span>FASE: <b id="phaseLabel" class="text-[#89aaff]">3月 (MAR) BROTACIÓN</b></span>
-        <span>TEMPORADA: <b id="seasonBadge" class="text-[#37ecc4]">AÑO 1</b></span>
+        <span>EDAD: <b id="simAgeLabel" class="text-[#89aaff]">AÑO 1 // PRIMAVERA</b></span>
+        <span>CALIBRE TRONCO: <b id="trunkCaliberLabel" class="text-[#37ecc4]">32.0 mm</b></span>
       </div>
     </div>
 
-    <!-- Right Pill: Compact Bio-Metrics -->
     <div class="cyber-panel px-3 py-1.5 rounded font-mono text-[11px] flex items-center gap-4 pointer-events-auto">
-      <div class="hidden md:flex items-center gap-2">
-        <span id="weatherDot" class="w-1.5 h-1.5 rounded-full bg-[#37ecc4]"></span>
-        <span id="cityDisplay" class="text-[#7ea4cb]">KYOTO SIM</span>
-        <b id="tempValue" class="text-[#37ecc4]">18.5°C</b>
-        <b id="humValue" class="text-[#58a6ff]">68%</b>
-        <button id="btnWeatherSim" class="px-1.5 py-0.5 bg-[#0a1d2e] hover:bg-[#122e47] border border-[#1f4361] text-[#8ab8d9] rounded text-[10px]">
-          <span id="weatherModeText">PRIMAVERA</span>
-        </button>
+      <div class="flex items-center gap-3">
+        <span class="text-[#7ea4cb]">YEMAS ACTIVAS: <b id="hudBuds" class="text-[#a3e635]">0</b></span>
+        <span class="text-[#7ea4cb]">HOJAS: <b id="hudLeaves" class="text-[#37ecc4]">0</b></span>
+        <span class="text-[#8ea9df]">RAMAS: <b id="hudBranches" class="text-[#89aaff]">0</b></span>
       </div>
-      <div class="flex items-center gap-3 border-l border-[#163247] pl-3">
-        <span class="text-[#7ea4cb]"><span id="hudMetric1Label">HOJAS:</span> <b id="hudPetioles" class="text-[#37ecc4]">0</b></span>
-        <span class="text-[#8ea9df]"><span id="hudMetric2Label">RAMIFICACIÓN:</span> <b id="hudFenestration" class="text-[#89aaff]">100%</b></span>
+      <div class="hidden md:flex items-center gap-2 border-l border-[#163247] pl-3">
+        <button id="btnSeasonTheme" class="px-2 py-0.5 bg-[#0a1d2e] hover:bg-[#122e47] border border-[#1f4361] text-[#8ab8d9] rounded text-[10px] transition">
+          ESTACIÓN: <b id="seasonThemeText" class="text-[#37ecc4]">PRIMAVERA / VERANO</b>
+        </button>
       </div>
     </div>
   </header>
 
-  <!-- Hidden legacy elements kept only for JS safety -->
-  <div class="hidden">
-    <span id="clockDisplay"></span>
-    <span id="plantedDateDisplay"></span>
-    <span id="targetDaysLabel"></span>
-    <span id="lightValue"></span>
-    <span id="metabRate"></span>
-    <span id="hudAgeTime"></span>
-    <span id="hudStage"></span>
-    <button id="btnLocate"></button>
-    <select id="cycleSelect"><option value="30" selected>30</option></select>
-  </div>
-
-  <!-- BOTTOM CONTROL DOCK: Pruning Tools, Growth Scrubber & Seasonal Progression -->
-  <footer class="relative z-20 cyber-panel px-3 py-2.5 rounded-lg max-w-6xl mx-auto w-full flex flex-col lg:flex-row items-center justify-between gap-2.5">
+  <!-- BOTTOM CONTROL DOCK: Interactive Pruning, Organic Bud Stimulation & Real-Time Simulation Speed -->
+  <footer class="relative z-20 cyber-panel px-3 py-2 rounded-lg max-w-6xl mx-auto w-full flex flex-col lg:flex-row items-center justify-between gap-2.5">
     
-    <!-- Left: Bonsai Pruning & Cultivation Tools -->
-    <div id="bonsaiToolsPanel" class="flex flex-wrap items-center gap-1.5 w-full lg:w-auto justify-center lg:justify-start">
-      <button id="toolPrune" title="Cortar rama o entrenudo (deja muñón y activa 2 yemas laterales opuestas)" class="tool-btn active flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-mono bg-[#0b2130] border border-[#235370] text-[#8cecd5] hover:bg-[#123349]">
+    <!-- Left: Bonsai Pruning & Bud Tools -->
+    <div class="flex flex-wrap items-center gap-1.5 w-full lg:w-auto justify-center lg:justify-start">
+      <button id="toolPrune" title="Cortar rama o entrenudo: elimina dominancia apical y redirige savia haciendo brotar yemas en otros puntos" class="tool-btn active flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-mono bg-[#0b2130] border border-[#235370] text-[#8cecd5] hover:bg-[#123349]">
         <span>✂️</span> <span class="font-bold">PODAR RAMA</span>
       </button>
 
-      <button id="toolPinch" title="Pinzar punta apical o defoliar hojas grandes (Mekiri / Ha-gari)" class="tool-btn flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-mono bg-[#0b2130] border border-[#235370] text-[#9bd6ff] hover:bg-[#123349]">
-        <span>🤏</span> <span class="font-bold">PINZAR / DEFOLIAR</span>
+      <button id="toolPinch" title="Pinzar punta tierna o estimular una yema latente para forzar brotación donde quieras" class="tool-btn flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-mono bg-[#0b2130] border border-[#235370] text-[#9bd6ff] hover:bg-[#123349]">
+        <span>🤏</span> <span class="font-bold">PINZAR / ACTIVAR YEMA</span>
       </button>
 
-      <button id="btnAdvanceSeason" title="Avanzar ciclo de crecimiento: engrosa el tronco y brotan nuevas ramas dobles en los cortes" class="flex items-center gap-1.5 px-3 py-1.5 rounded text-[11px] font-bold font-mono bg-[#143a32] border border-[#37ecc4] text-[#37ecc4] hover:bg-[#1b4e43] active:scale-95 transition shadow">
-        <span>⏩</span> +1 TEMPORADA (BROTAR)
-      </button>
-
-      <button id="btnUndo" title="Deshacer último corte" class="px-2 py-1.5 rounded text-[11px] font-mono bg-[#091a27] border border-[#1b3d56] text-[#7ea0d6] hover:bg-[#11293c] active:scale-95 transition">
-        ↺
+      <button id="btnUndo" title="Deshacer último corte" class="px-2.5 py-1.5 rounded text-[11px] font-mono bg-[#091a27] border border-[#1b3d56] text-[#7ea0d6] hover:bg-[#11293c] active:scale-95 transition">
+        ↺ DESHACER
       </button>
 
       <button id="btnSoundToggle" title="Activar/Silenciar audio Zen" class="px-2 py-1.5 rounded text-[11px] font-mono bg-[#091a27] border border-[#1b3d56] text-[#7ea0d6] hover:bg-[#11293c] active:scale-95 transition">
@@ -154,117 +111,47 @@
       </button>
     </div>
 
-    <!-- Center: Seasonal Growth Slider (3月 Mar -> 6月 Jun) -->
-    <div class="flex items-center gap-2.5 w-full lg:w-5/12">
-      <div class="flex items-center gap-1.5 whitespace-nowrap">
-        <span id="syncBadge" class="w-2 h-2 rounded-full bg-[#37ecc4]"></span>
-        <span class="text-[11px] text-[#71a5c7] font-bold">DESARROLLO:</span>
-      </div>
-      <input id="ageSlider" type="range" min="0.04" max="1.0" step="0.001" value="0.72" class="w-full cursor-pointer">
-      <span id="ageDaysLabel" class="text-[11px] text-[#37ecc4] font-mono w-24 text-right">5月 (MAY)</span>
+    <!-- Center: Real-Time Biological Growth Speed (No pre-baked video slider!) -->
+    <div class="flex flex-wrap items-center justify-center gap-1.5 font-mono text-[11px]">
+      <span class="text-[#71a5c7] text-[10px] mr-1">TIEMPO BIO:</span>
+      <button id="btnSpeedPause" class="speed-btn px-2.5 py-1.5 rounded bg-[#081724] border border-[#1a3850] text-[#8ab8d9] hover:bg-[#10263a] transition">
+        ⏸ PAUSA
+      </button>
+      <button id="btnSpeed1x" class="speed-btn active px-2.5 py-1.5 rounded bg-[#081724] border border-[#1a3850] text-[#8ab8d9] hover:bg-[#10263a] transition">
+        ▶ 1x ORGÁNICO
+      </button>
+      <button id="btnSpeed4x" class="speed-btn px-2.5 py-1.5 rounded bg-[#081724] border border-[#1a3850] text-[#8ab8d9] hover:bg-[#10263a] transition">
+        ⏩ 4x RÁPIDO
+      </button>
+      <button id="btnBurstSpring" title="Impulso de savia: despierta yemas latentes y acelera una oleada de crecimiento" class="px-2.5 py-1.5 rounded bg-[#143a32] border border-[#37ecc4] text-[#37ecc4] hover:bg-[#1b4e43] font-bold active:scale-95 transition">
+        ⚡ +BROTACIÓN
+      </button>
     </div>
 
-    <!-- Right: Species & Seed Controls -->
+    <!-- Right: Species & Seed Reset Controls -->
     <div class="flex flex-wrap items-center justify-end gap-1.5 w-full lg:w-auto font-mono text-[11px]">
-      <div class="flex items-center bg-[#081724] border border-[#1a3850] rounded px-2 py-1 gap-1.5">
+      <div class="flex items-center bg-[#081724] border border-[#1a3850] rounded px-2 py-1">
         <select id="speciesSelect" class="bg-transparent text-[#37ecc4] font-bold outline-none cursor-pointer">
           <option value="BONSAI_MAPLE" selected class="bg-[#06121c]">🍁 Arce Japonés (Acer Palmatum)</option>
           <option value="BONSAI_ULMUS" class="bg-[#06121c]">🌳 Olmo Chino (Ulmus Parvifolia)</option>
           <option value="BONSAI_PINE" class="bg-[#06121c]">🌲 Pino Negro (Pinus Thunbergii)</option>
-          <option value="BONSAI_JUNIPER" class="bg-[#06121c]">🌾 Enebro (Juniperus Chinensis)</option>
-          <option value="MONSTERA" class="bg-[#06121c]">🌸 Flor Iris / Monstera ASCII</option>
         </select>
       </div>
 
-      <button id="btnPlantNow" title="Reiniciar brotación de primavera (3月 Marzo)" class="px-2.5 py-1.5 bg-[#0b2230] hover:bg-[#13354a] border border-[#235370] text-[#9bd6ff] rounded transition active:scale-95">
-        3月 MARZO
+      <button id="btnBareStump" title="Empezar desde el tronco base recién podado en Marzo (3月) para diseñar todas las ramas desde cero" class="px-2.5 py-1.5 bg-[#0b2230] hover:bg-[#13354a] border border-[#235370] text-[#9bd6ff] rounded transition active:scale-95">
+        🪵 DESDE TRONCO (3月)
       </button>
 
-      <button id="btnMutate" class="px-2.5 py-1.5 bg-[#102d3e] hover:bg-[#18445f] border border-[#30709f] text-[#50e3c2] rounded transition active:scale-95 font-bold flex items-center gap-1">
-        <span>⟳</span> SEMILLA
-      </button>
-
-      <button id="btnTimeLapse" class="px-2.5 py-1.5 bg-[#092925] hover:bg-[#0e3f3a] border border-[#20695f] text-[#37ecc4] rounded transition active:scale-95 flex items-center gap-1">
-        <span id="playIcon">▶</span> <span id="playText">CRECER</span>
+      <button id="btnMutate" title="Generar un nuevo ejemplar único con otra semilla genética" class="px-2.5 py-1.5 bg-[#102d3e] hover:bg-[#18445f] border border-[#30709f] text-[#50e3c2] rounded transition active:scale-95 font-bold flex items-center gap-1">
+        <span>⟳</span> NUEVA SEMILLA
       </button>
     </div>
   </footer>
 
   <script>
     /* ====================================================================
-       ACER PALMATUM (JAPANESE MAPLE) & BONSAI BIO-SIMULATOR ENGINE
+       1. DETERMINISTIC PRNG & AUDIO SYNTHESIZER
        ==================================================================== */
-
-    const canvas = document.getElementById('bioCanvas');
-    const ctx = canvas.getContext('2d');
-
-    // UI References
-    const ageSlider = document.getElementById('ageSlider');
-    const ageDaysLabel = document.getElementById('ageDaysLabel');
-    const syncBadge = document.getElementById('syncBadge');
-    const speciesSelect = document.getElementById('speciesSelect');
-    const btnMutate = document.getElementById('btnMutate');
-    const btnPlantNow = document.getElementById('btnPlantNow');
-    const btnTimeLapse = document.getElementById('btnTimeLapse');
-    const btnWeatherSim = document.getElementById('btnWeatherSim');
-    const weatherModeText = document.getElementById('weatherModeText');
-    const playIcon = document.getElementById('playIcon');
-    const playText = document.getElementById('playText');
-
-    // HUD Elements
-    const specimenHeader = document.getElementById('specimenHeader');
-    const seedDisplay = document.getElementById('seedDisplay');
-    const phaseLabel = document.getElementById('phaseLabel');
-    const seasonBadge = document.getElementById('seasonBadge');
-    const cityDisplay = document.getElementById('cityDisplay');
-    const tempValue = document.getElementById('tempValue');
-    const humValue = document.getElementById('humValue');
-    const hudMetric1Label = document.getElementById('hudMetric1Label');
-    const hudMetric2Label = document.getElementById('hudMetric2Label');
-    const hudPetioles = document.getElementById('hudPetioles');
-    const hudFenestration = document.getElementById('hudFenestration');
-
-    let currentSeed = 0x84A3F2;
-    let currentSpecies = 'BONSAI_MAPLE';
-    let totalCycleDays = 30;
-    let isTimeLapse = false;
-    let growthProgress = 0.72; // Starts in lush late-spring canopy so user sees full maple leaves immediately
-    let globalTick = 0;
-
-    // Seasonal / Atmospheric state
-    const environment = {
-      tempC: 19.5,
-      humidity: 68,
-      isDay: true,
-      metabolicFactor: 1.0,
-      seasonTheme: 'SPRING_SUMMER' // 'SPRING_SUMMER' | 'AUTUMN_MOMIJI'
-    };
-
-    btnWeatherSim.addEventListener('click', () => {
-      if (environment.seasonTheme === 'SPRING_SUMMER') {
-        environment.seasonTheme = 'AUTUMN_MOMIJI';
-        environment.tempC = 12.4;
-        environment.humidity = 58;
-        weatherModeText.innerText = 'OTOÑO (MOMIJI)';
-        tempValue.innerText = '12.4°C';
-      } else {
-        environment.seasonTheme = 'SPRING_SUMMER';
-        environment.tempC = 19.5;
-        environment.humidity = 68;
-        weatherModeText.innerText = 'PRIMAVERA / VERANO';
-        tempValue.innerText = '19.5°C';
-      }
-    });
-
-    ageSlider.addEventListener('input', (e) => {
-      if (isTimeLapse) toggleTimeLapse(false);
-      growthProgress = parseFloat(e.target.value);
-    });
-
-    /* ====================================================================
-       1. DETERMINISTIC PRNG & GEOMETRY UTILITIES
-       ==================================================================== */
-
     function createPRNG(seed) {
       let s = (typeof seed === 'number' ? seed : 0x84A3F2) >>> 0;
       return function() {
@@ -275,41 +162,6 @@
       };
     }
 
-    const CHARS_PETIOLE = ['|', '¦', '!', '1', 'i', ':', '/'];
-    const CHARS_SHEATH = ['(', ')', '|', '¦', ':', ';', '!'];
-    const CHARS_BARK = ['#', '%', '8', '0', '&', '=', '|', '¦', ':', ';'];
-    const CHARS_BLADE_FILL = ['0', '1', '8', '6', '4', '9', '3', '7', '2', '5', '=', ':', '·', '+'];
-    const CHARS_EDGE = ['/', '\\', '|', '(', ')', '_', '.'];
-
-    function getGlyph(pool, hash) {
-      const idx = Math.abs(Math.floor(hash)) % pool.length;
-      return pool[idx];
-    }
-
-    function evalQuadBezier(p0x, p0y, cpx, cpy, p1x, p1y, t) {
-      const invT = 1 - t;
-      const x = invT * invT * p0x + 2 * invT * t * cpx + t * t * p1x;
-      const y = invT * invT * p0y + 2 * invT * t * cpy + t * t * p1y;
-      const dx = 2 * invT * (cpx - p0x) + 2 * t * (p1x - cpx);
-      const dy = 2 * invT * (cpy - p0y) + 2 * t * (p1y - cpy);
-      const angle = Math.atan2(dy, dx);
-      return { x, y, angle };
-    }
-
-    function getBezierSubCurve(p0x, p0y, cpx, cpy, p1x, p1y, t) {
-      if (t >= 0.999) return { p0x, p0y, cpx, cpy, p1x, p1y };
-      const q0x = p0x + (cpx - p0x) * t;
-      const q0y = p0y + (cpy - p0y) * t;
-      const q1x = cpx + (p1x - cpx) * t;
-      const q1y = cpy + (p1y - cpy) * t;
-      const rx = q0x + (q1x - q0x) * t;
-      const ry = q0y + (q1y - q0y) * t;
-      return { p0x, p0y, cpx: q0x, cpy: q0y, p1x: rx, p1y: ry };
-    }
-
-    /* ====================================================================
-       2. WEB AUDIO ZEN SYNTHESIZER
-       ==================================================================== */
     class BonsaiAudioSynth {
       constructor() {
         this.ctx = null;
@@ -320,9 +172,7 @@
           const AudioCtx = window.AudioContext || window.webkitAudioContext;
           if (AudioCtx) this.ctx = new AudioCtx();
         }
-        if (this.ctx && this.ctx.state === 'suspended') {
-          this.ctx.resume();
-        }
+        if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
       }
       playSnip() {
         if (!this.enabled) return;
@@ -333,27 +183,22 @@
           const osc = this.ctx.createOscillator();
           const gain = this.ctx.createGain();
           const filter = this.ctx.createBiquadFilter();
-
           filter.type = 'highpass';
-          filter.frequency.setValueAtTime(1600, now);
-          filter.frequency.exponentialRampToValueAtTime(3400, now + 0.04);
-
+          filter.frequency.setValueAtTime(1700, now);
+          filter.frequency.exponentialRampToValueAtTime(3500, now + 0.04);
           osc.type = 'sawtooth';
-          osc.frequency.setValueAtTime(2200, now);
-          osc.frequency.exponentialRampToValueAtTime(420, now + 0.05);
-
+          osc.frequency.setValueAtTime(2300, now);
+          osc.frequency.exponentialRampToValueAtTime(420, now + 0.055);
           gain.gain.setValueAtTime(0.22, now);
           gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
-
           osc.connect(filter);
           filter.connect(gain);
           gain.connect(this.ctx.destination);
-
           osc.start(now);
           osc.stop(now + 0.065);
         } catch (e) {}
       }
-      playChime() {
+      playBudPop() {
         if (!this.enabled) return;
         this.init();
         if (!this.ctx) return;
@@ -361,1499 +206,1427 @@
           const now = this.ctx.currentTime;
           const osc = this.ctx.createOscillator();
           const gain = this.ctx.createGain();
-
           osc.type = 'sine';
-          osc.frequency.setValueAtTime(740, now);
-          osc.frequency.exponentialRampToValueAtTime(1108, now + 0.10);
-
-          gain.gain.setValueAtTime(0.15, now);
-          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
-
+          osc.frequency.setValueAtTime(520, now);
+          osc.frequency.exponentialRampToValueAtTime(980, now + 0.09);
+          gain.gain.setValueAtTime(0.10, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
           osc.connect(gain);
           gain.connect(this.ctx.destination);
-
           osc.start(now);
-          osc.stop(now + 0.46);
+          osc.stop(now + 0.15);
         } catch (e) {}
       }
     }
     const bonsaiAudio = new BonsaiAudioSynth();
 
     /* ====================================================================
-       3. AUTHENTIC BONSAI ARCHITECTURE:
-          MUSCULAR CHOPPED TRUNK BASE + INTERNODAL SHOOTS + PALMATE LEAVES
+       2. CAUSAL BIOLOGICAL BONSAI ENGINE (HORMONAL AUXIN, BUDS & SAP FLOW)
        ====================================================================
-       Matches the 5 Japanese Maple (Acer palmatum) reference photos:
-       - Photo 2 (3月 Mar): Thick, muscular, multi-head woody base (Nebari +
-         Tachiagari) with diagonal saw-chop scars sealed with grey cut-paste,
-         sprouting slender young shoots with tiny bronze-red unfolding palmate leaves.
-       - Photo 1 (3月 Mar): Long, slender shoots (whips) extending outward with
-         opposite leaf pairs at regular internodes.
-       - Photo 3 & 5 (6月 Jun): Branches are still slender, but the 5-lobed palmate
-         maple leaves have expanded to full lush emerald size on long red petioles.
-       - Photo 4 (Summer Prune): Cutting a shoot at any internode removes the outer
-         whip, leaving a thickened green-woody stub capped with a fresh cut callus,
-         which then bifurcates into 2 opposite shoots on the next growth flush!
+       How this replicates real nature (Acer palmatum):
+       - The tree is a living organism of Segments (Internodes & Trunk) and Buds (Yemas).
+       - Active Apical Buds emit AUXIN downward, suppressing lateral buds below them.
+       - Active Leaves photosynthesize, sending sugars downward (Pipe Model),
+         physically thickening every supporting branch and trunk segment on that path!
+       - WHEN YOU CUT A BRANCH:
+         1. Apical dominance (auxin) above the cut vanishes immediately.
+         2. Root sap & vigor that was feeding the cut branch is redirected to
+            dormant buds on the cut stub AND latent buds on other parts of the trunk/branches!
+         3. Those dormant buds visibly swell (glowing crimson-green) and burst into
+            brand-new shoots growing in new directions!
     */
 
-    const BONSAI_SPECIES_MODELS = {
-      BONSAI_MAPLE: {
-        code: 'BONSAI_MAPLE',
-        botanicalName: 'ACER_PALMATUM',
-        leafType: 'MAPLE_PALMATE',
-        potColor: 'TERRACOTTA',
-        oppositePhyllotaxy: true
-      },
-      BONSAI_ULMUS: {
-        code: 'BONSAI_ULMUS',
-        botanicalName: 'ULMUS_PARVIFOLIA',
-        leafType: 'ELM_SERRATED',
-        potColor: 'GLAZED_BLUE',
-        oppositePhyllotaxy: false
-      },
-      BONSAI_PINE: {
-        code: 'BONSAI_PINE',
-        botanicalName: 'PINUS_THUNBERGII',
-        leafType: 'PINE_NEEDLE',
-        potColor: 'DARK_CLAY',
-        oppositePhyllotaxy: false
-      },
-      BONSAI_JUNIPER: {
-        code: 'BONSAI_JUNIPER',
-        botanicalName: 'JUNIPERUS_CHINENSIS',
-        leafType: 'JUNIPER_SCALE',
-        potColor: 'TERRACOTTA',
-        oppositePhyllotaxy: false
-      }
-    };
+    let currentSeed = 0x84A3F2;
+    let currentSpecies = 'BONSAI_MAPLE';
+    let seasonTheme = 'SPRING'; // 'SPRING' | 'AUTUMN'
+    let simSpeed = 1.0; // 0 = paused, 1.0 = organic real-time, 4.0 = fast-forward
+    let activeTool = 'PRUNE'; // 'PRUNE' | 'PINCH'
 
-    // Falling clippings animation list when the user prunes a shoot or leaf
-    let fallingClippings = [];
-
-    class FractalBonsaiTree {
-      constructor(seed, speciesKey = 'BONSAI_MAPLE') {
+    class LivingBonsaiOrganism {
+      constructor(seed, species = 'BONSAI_MAPLE') {
         this.seed = seed;
-        this.speciesKey = speciesKey;
-        this.spec = BONSAI_SPECIES_MODELS[speciesKey] || BONSAI_SPECIES_MODELS['BONSAI_MAPLE'];
+        this.species = species;
         this.rng = createPRNG(seed);
-        this.nodes = new Map();
+        this.segments = [];
+        this.SegmentMap = new Map();
+        this.buds = [];
+        this.leaves = [];
         this.nebariRoots = [];
-        this.fertilizerPellets = [];
-        this.history = [];
-        this.seasonCount = 1;
-        this.nodeCounter = 1;
-        this.buildAuthenticBonsai();
+        this.pellets = [];
+        this.fallingClips = [];
+        this.undoStack = [];
+        this.simDays = 1;
+        this.nextId = 1;
+        this.initTrunkAndDormantBuds();
       }
 
-      buildAuthenticBonsai() {
-        this.nodes.clear();
-        this.nebariRoots = [];
-        this.fertilizerPellets = [];
+      initTrunkAndDormantBuds() {
         const rng = this.rng;
+        this.segments = [];
+        this.SegmentMap.clear();
+        this.buds = [];
+        this.leaves = [];
+        this.nebariRoots = [];
+        this.pellets = [];
 
-        // 1. Wide Muscular Nebari Surface Root Flare (gripping the soil like Photo 1, 2, 4)
-        const numRoots = 7 + Math.floor(rng() * 3);
-        for (let r = 0; r < numRoots; r++) {
-          const frac = (r / (numRoots - 1)) * 2 - 1; // -1 to +1
+        // 1. Nebari Surface Root Flare (gripping the moss mound)
+        const numRoots = 8 + Math.floor(rng() * 3);
+        for (let i = 0; i < numRoots; i++) {
+          const frac = (i / (numRoots - 1)) * 2 - 1;
+          const angle = frac * 1.35 + (rng() - 0.5) * 0.15;
+          const len = 34 + Math.abs(frac) * 20 + rng() * 14;
           this.nebariRoots.push({
-            dirX: frac * (42 + rng() * 18),
-            dirY: 5 + Math.abs(frac) * 6 + rng() * 4,
-            thickness: 12.5 - Math.abs(frac) * 4.5 + rng() * 2.0,
-            hasPasteScar: (Math.abs(frac) < 0.35 && rng() < 0.45)
+            x0: frac * 10, y0: 2, z0: (rng() - 0.5) * 8,
+            x1: Math.sin(angle) * len, y1: -5 - rng() * 4, z1: Math.cos(angle) * 14,
+            r0: 9.5 - Math.abs(frac) * 3.0,
+            r1: 2.2
           });
         }
 
-        // White/Cream Organic Fertilizer Cakes (Tamahi / Biogold) on the pot soil rim (Photos 1, 2, 3, 5)
-        const pelletPositions = [-78, -52, -26, 48, 76];
-        for (const px of pelletPositions) {
-          this.fertilizerPellets.push({
-            x: px + (rng() - 0.5) * 10,
-            y: 1.5 + rng() * 3.5,
-            rx: 8.5 + rng() * 2.5,
-            ry: 4.2 + rng() * 1.2
+        // White Tamahi Organic Fertilizer Cakes on the soil rim (Photos 1, 2, 3, 5)
+        const pelletX = [-82, -54, -25, 48, 78];
+        for (const px of pelletX) {
+          this.pellets.push({
+            x: px + (rng() - 0.5) * 8,
+            y: -2.5,
+            z: 8 + (rng() - 0.5) * 10,
+            rx: 8.5 + rng() * 2.0,
+            ry: 4.2 + rng() * 1.0
           });
         }
 
-        // 2. Heavy Chopped Trunk Base (Tachiagari + 3 to 4 Muscular Woody Stumps like Photo 2 & 4)
-        const baseGirth = 30.0 + rng() * 5.0;
-        const mainLean = (rng() - 0.5) * 10;
+        // 2. Muscular Chopped Woody Trunk Base (Tachiagari + 3-4 Chopped Trunk Heads like Photo 2 & 4)
+        const baseRadius = 22.0 + rng() * 4.0;
+        const leanX = (rng() - 0.5) * 12;
 
-        // Lower fused trunk core
-        const coreTrunk = {
-          id: 'TRUNK_BASE',
+        const trunkBase = this.createSegment({
           parentId: null,
-          parentAttachT: 1.0,
-          depth: 0,
           type: 'TRUNK',
-          p0x: 0, p0y: 2,
-          cpx: mainLean * 0.5, cpy: -18,
-          p1x: mainLean, p1y: -36 - rng() * 8,
-          baseGirth: baseGirth,
-          currentGirth: baseGirth,
-          endGirth: baseGirth * 0.78,
-          woodiness: 1.0, // 1.0 = aged grey-taupe bark
-          birthAge: 0.0,
-          matureAge: 0.04,
+          x0: 0, y0: -2, z0: 0,
+          x1: leanX, y1: 38 + rng() * 8, z1: 0,
+          r0: baseRadius,
+          r1: baseRadius * 0.78,
+          woodiness: 1.0,
+          generation: 0,
+          curT: 1.0,
           hasChopScar: true,
-          scarStyle: 'DARK_PASTE', // Dark grey cut-paste seal on base like Photo 1 & 2
-          scarOffsetX: 8,
-          scarOffsetY: 12,
-          pruned: false,
-          leaves: [],
-          childrenIds: []
-        };
-        this.nodes.set(coreTrunk.id, coreTrunk);
-
-        // 3 to 4 Heavy Chopped Sub-Trunks (the thick woody pillars in Photos 1, 2, 4)
-        const numHeads = 3 + (rng() > 0.45 ? 1 : 0);
-        const headAngles = numHeads === 4
-          ? [-0.58, -0.18, 0.16, 0.54]
-          : [-0.48, -0.04, 0.44];
-
-        for (let h = 0; h < numHeads; h++) {
-          const hAngle = headAngles[h] + (rng() - 0.5) * 0.14;
-          const isCenterHead = Math.abs(hAngle) < 0.25;
-          const headLen = (isCenterHead ? 42 : 32) + rng() * 14;
-          const attachX = coreTrunk.p1x + hAngle * 18;
-          const attachY = coreTrunk.p1y + Math.abs(hAngle) * 10;
-
-          const endX = attachX + Math.sin(hAngle) * headLen;
-          const endY = attachY - Math.cos(hAngle) * headLen;
-          const ctrlX = (attachX + endX) * 0.5 + Math.sin(hAngle) * 5;
-          const ctrlY = (attachY + endY) * 0.5;
-
-          const headGirth = (isCenterHead ? 13.5 : 10.5) + rng() * 2.5;
-
-          const trunkHead = {
-            id: `TRUNK_HEAD_${h}`,
-            parentId: coreTrunk.id,
-            parentAttachT: 0.85,
-            depth: 0,
-            type: 'TRUNK_HEAD',
-            p0x: attachX, p0y: attachY,
-            cpx: ctrlX, cpy: ctrlY,
-            p1x: endX, p1y: endY,
-            baseGirth: headGirth,
-            currentGirth: headGirth,
-            endGirth: headGirth * 0.82,
-            woodiness: 0.95,
-            birthAge: 0.0,
-            matureAge: 0.05,
-            hasChopScar: true, // Every trunk head ends in a flat/angled saw chop!
-            scarStyle: h === 0 ? 'DARK_PASTE' : 'CALLUS_BEVEL',
-            swingDir: hAngle >= 0 ? 1 : -1,
-            pruned: false,
-            leaves: [],
-            childrenIds: []
-          };
-          this.nodes.set(trunkHead.id, trunkHead);
-          coreTrunk.childrenIds.push(trunkHead.id);
-
-          // From each chopped woody trunk head, sprout 2 to 3 slender shoots (like Photo 1 & 2!)
-          const numShoots = 2 + (isCenterHead || rng() > 0.5 ? 1 : 0);
-          for (let s = 0; s < numShoots; s++) {
-            const shootOffsetAngle = (s - (numShoots - 1) * 0.5) * 0.48 + (rng() - 0.5) * 0.18;
-            const shootDirAngle = -Math.PI / 2 + hAngle * 0.85 + shootOffsetAngle;
-            const startT = 0.72 + s * 0.12;
-            const hasWire = (h === numHeads - 1 && s === numShoots - 1); // Wired right branch like Photo 2!
-            const shootStartBirth = 0.05 + (h * 0.02 + s * 0.03);
-
-            this.buildInternodeChain({
-              parentNode: trunkHead,
-              attachT: Math.min(0.98, startT),
-              dirAngle: shootDirAngle,
-              numInternodes: 3 + Math.floor(rng() * 2), // 3 to 4 internodes per shoot
-              startBirth: shootStartBirth,
-              baseGirth: 2.2 + rng() * 0.7, // Slender shoot (contrast with thick trunk!)
-              woodiness: 0.25, // Semi-woody green-brown at base, tender at tip
-              hasWire,
-              generation: 1
-            });
-          }
-        }
-      }
-
-      /*
-       * Builds a realistic chain of Internodes (entrenudos) along a growing shoot.
-       * At the end of each internode sits a Node with opposite maple leaves (filotaxis opuesta).
-       */
-      buildInternodeChain(cfg) {
-        const { parentNode, attachT, dirAngle, numInternodes, startBirth, baseGirth, woodiness, hasWire, generation } = cfg;
-        const rng = this.rng;
-
-        let curParent = parentNode;
-        let curAttachT = attachT;
-        let curAngle = dirAngle;
-        let curBirth = startBirth;
-        let curGirth = baseGirth;
-
-        // Calculate starting world coordinate on parent
-        const startPt = evalQuadBezier(
-          parentNode.p0x, parentNode.p0y,
-          parentNode.cpx, parentNode.cpy,
-          parentNode.p1x, parentNode.p1y,
-          attachT
-        );
-        let curX = startPt.x;
-        let curY = startPt.y;
-
-        for (let idx = 0; idx < numInternodes; idx++) {
-          const internodeLen = (26 + rng() * 14) * Math.pow(0.88, generation - 1) * (1 - idx * 0.08);
-          // Slight natural phototropic upward curve
-          const bendAngle = curAngle + (rng() - 0.5) * 0.22 - (Math.cos(curAngle) * 0.08);
-          const nextX = curX + Math.cos(bendAngle) * internodeLen;
-          const nextY = curY + Math.sin(bendAngle) * internodeLen;
-          const ctrlX = (curX + nextX) * 0.5 + (rng() - 0.5) * 4;
-          const ctrlY = (curY + nextY) * 0.5 - 2;
-
-          const duration = 0.11;
-          const matureAge = Math.min(0.96, curBirth + duration);
-          const nextGirth = Math.max(1.1, curGirth * 0.84);
-
-          // Create Opposite Pair of Leaves at the end of this internode
-          const leaves = this.createNodeLeaves(bendAngle, matureAge, idx, numInternodes, generation);
-
-          const internode = {
-            id: `INT_${this.nodeCounter++}`,
-            parentId: curParent.id,
-            parentAttachT: curAttachT,
-            depth: generation,
-            internodeIndex: idx,
-            type: 'INTERNODE',
-            isGreenShoot: true,
-            p0x: curX, p0y: curY,
-            cpx: ctrlX, cpy: ctrlY,
-            p1x: nextX, p1y: nextY,
-            dirAngle: bendAngle,
-            length: internodeLen,
-            baseGirth: curGirth,
-            currentGirth: curGirth,
-            endGirth: nextGirth,
-            woodiness: Math.max(0.0, woodiness - idx * 0.12),
-            hasWire: hasWire && idx <= 2,
-            birthAge: curBirth,
-            matureAge: matureAge,
-            hasChopScar: false,
-            scarStyle: null,
-            pruned: false,
-            leaves,
-            childrenIds: []
-          };
-
-          this.nodes.set(internode.id, internode);
-          curParent.childrenIds.push(internode.id);
-
-          // Occasional secondary lateral shoot sprouting from lower internodes
-          if (idx === 1 && generation === 1 && rng() < 0.55) {
-            const sideSign = rng() > 0.5 ? 1 : -1;
-            const latAngle = bendAngle + sideSign * (0.52 + rng() * 0.2);
-            this.buildInternodeChain({
-              parentNode: internode,
-              attachT: 1.0,
-              dirAngle: latAngle,
-              numInternodes: 2,
-              startBirth: matureAge + 0.06,
-              baseGirth: nextGirth * 0.85,
-              woodiness: 0.1,
-              hasWire: false,
-              generation: generation + 1
-            });
-          }
-
-          curParent = internode;
-          curAttachT = 1.0;
-          curX = nextX;
-          curY = nextY;
-          curAngle = bendAngle;
-          curBirth = matureAge;
-          curGirth = nextGirth;
-        }
-      }
-
-      createNodeLeaves(stemAngle, nodeMatureAge, internodeIdx, totalInternodes, generation) {
-        const rng = this.rng;
-        const leaves = [];
-        const isTerminal = (internodeIdx === totalInternodes - 1);
-
-        // Opposite phyllotaxy: 2 leaves (left and right of the stem node)
-        const sides = [-1, 1];
-        for (const side of sides) {
-          // Petiole angles outward from the node
-          const petioleAngle = stemAngle + side * (0.65 + rng() * 0.35);
-          // Blade arches outward/downward slightly with gravity
-          const bladeAngle = petioleAngle + side * (0.25 + rng() * 0.25);
-
-          // Leaf size: lower/middle leaves on the shoot grow large (like Photo 3 & 5!),
-          // while brand-new apical tip leaves are slightly smaller/younger.
-          // Also higher generations (after repeated pruning/ramification) produce finer, smaller bonsai leaves!
-          const ramificationScale = Math.pow(0.86, Math.max(0, generation - 1));
-          const maxRadius = (isTerminal ? (19 + rng() * 7) : (26 + rng() * 11)) * ramificationScale;
-          const maxPetioleLen = (isTerminal ? (10 + rng() * 5) : (15 + rng() * 8)) * ramificationScale;
-
-          leaves.push({
-            id: `LF_${this.nodeCounter++}`,
-            side,
-            petioleAngle,
-            bladeAngle,
-            maxRadius,
-            maxPetioleLen,
-            birthAge: nodeMatureAge,
-            fullLeafAge: Math.min(1.0, nodeMatureAge + 0.28),
-            layerLight: 0.35 + rng() * 0.65, // Depth shading (0.35 = shaded interior, 1.0 = sunlit front)
-            hueShift: (rng() - 0.5) * 14,
-            seed: Math.floor(rng() * 99999),
-            pruned: false
-          });
-        }
-        return leaves;
-      }
-
-      countActiveLeaves(nodeId) {
-        const node = this.nodes.get(nodeId);
-        if (!node || node.pruned) return 0;
-        let count = node.leaves ? node.leaves.filter(l => !l.pruned).length : 0;
-        for (const cid of node.childrenIds) {
-          count += this.countActiveLeaves(cid);
-        }
-        return count;
-      }
-
-      /*
-       * Advance 1 Season (+1 Temporada):
-       * 1. Photosynthetic thickening: Every surviving internode and trunk head thickens
-       *    proportionally to the leaves it supported, and green stubs lignify into woody bark (like Photo 4!).
-       * 2. Opposite Bud Awakening (Bifurcation): Any internode whose tip was pruned (or unpruned tips)
-       *    awakens its two opposite axillary buds, sprouting a Y-bifurcation of 2 new shoots!
-       */
-      growSeason(metabolicFactor = 1.0) {
-        this.seasonCount++;
-        const rng = this.rng;
-
-        // 1. Thicken and lignify all surviving nodes
-        for (const [id, node] of this.nodes) {
-          if (node.pruned) continue;
-          const leafCount = this.countActiveLeaves(id);
-          const vigor = Math.max(1, leafCount);
-
-          if (node.type === 'TRUNK' || node.type === 'TRUNK_HEAD') {
-            node.currentGirth += (0.45 + Math.sqrt(vigor) * 0.25) * metabolicFactor;
-            node.endGirth = node.currentGirth * 0.82;
-          } else {
-            // Internode stubs thicken noticeably (turning into green-woody structural branches like Photo 4)
-            const depthWeight = Math.max(0.35, 1.2 - node.depth * 0.2);
-            node.currentGirth += (0.45 + Math.sqrt(vigor) * 0.28) * depthWeight * metabolicFactor;
-            node.endGirth = Math.max(1.4, node.currentGirth * 0.85);
-            node.woodiness = Math.min(0.92, node.woodiness + 0.28);
-          }
-          // Compress birthAge so existing wood is already 100% present at the start of the new season
-          node.birthAge = Math.min(0.08, node.birthAge * 0.25);
-          node.matureAge = Math.min(0.14, node.matureAge * 0.28);
-          for (const lf of node.leaves) {
-            lf.birthAge = node.matureAge;
-            lf.fullLeafAge = Math.min(0.45, node.matureAge + 0.22);
-          }
-        }
-
-        // 2. Find terminal internodes (especially pruned stubs!) to sprout opposite Y-bifurcations
-        const terminalStubs = [];
-        for (const [, node] of this.nodes) {
-          if (node.pruned || node.type !== 'INTERNODE') continue;
-          const activeChildren = node.childrenIds.filter(cid => {
-            const c = this.nodes.get(cid);
-            return c && !c.pruned;
-          });
-          if (activeChildren.length === 0 && node.depth < 5) {
-            terminalStubs.push(node);
-          }
-        }
-
-        for (const stub of terminalStubs) {
-          // If the stub was pruned (hasChopScar), BOTH opposite axillary buds wake up -> true Y bifurcation!
-          const isPrunedStub = stub.hasChopScar;
-          const spreadAngles = isPrunedStub
-            ? [-0.46 + (rng() - 0.5) * 0.12, 0.46 + (rng() - 0.5) * 0.12]
-            : [(rng() - 0.5) * 0.35];
-
-          for (const deltaAngle of spreadAngles) {
-            const newAngle = stub.dirAngle + deltaAngle;
-            const startBirth = 0.16 + rng() * 0.12;
-            this.buildInternodeChain({
-              parentNode: stub,
-              attachT: 0.96,
-              dirAngle: newAngle,
-              numInternodes: 2 + (rng() > 0.5 ? 1 : 0),
-              startBirth,
-              baseGirth: Math.max(1.5, stub.endGirth * 0.72),
-              woodiness: 0.15,
-              hasWire: false,
-              generation: stub.depth + 1
-            });
-          }
-        }
-      }
-
-      /*
-       * Prune at a specific internode (Sentei):
-       * Severs `nodeId` and all its descendants, leaving `node.parentId` as a stub
-       * with a fresh green-white / cut-paste scar (like Photo 4!).
-       */
-      pruneNode(nodeId, liveGeom) {
-        const node = this.nodes.get(nodeId);
-        if (!node || node.pruned || node.type === 'TRUNK' || node.type === 'TRUNK_HEAD') return false;
-
-        const affectedIds = [];
-        this.collectDescendantIds(nodeId, affectedIds);
-
-        const parent = node.parentId ? this.nodes.get(node.parentId) : null;
-        this.history.push({
-          action: 'PRUNE',
-          nodeId,
-          affectedIds,
-          prevParentScar: parent ? parent.hasChopScar : false,
-          prevParentScarStyle: parent ? parent.scarStyle : null
+          scarStyle: 'DARK_PASTE'
         });
 
-        // Spawn falling clipping animation for severed segments
-        for (const id of affectedIds) {
-          const n = this.nodes.get(id);
-          if (n && !n.pruned) {
-            const g = liveGeom && liveGeom.get(id);
-            if (g) {
-              fallingClippings.push({
-                p0x: g.p0x, p0y: g.p0y,
-                p1x: g.p1x, p1y: g.p1y,
-                vx: (Math.random() - 0.5) * 1.4,
-                vy: 0.8 + Math.random() * 1.2,
-                alpha: 1.0,
-                leaves: n.leaves ? n.leaves.filter(l => !l.pruned) : []
-              });
-            }
-            n.pruned = true;
+        // 3 to 4 Muscular Sub-Trunks (Chopped Woody Pillars from previous years' training)
+        const numHeads = 3 + (rng() > 0.45 ? 1 : 0);
+        const spreadAngles = numHeads === 4
+          ? [-0.56, -0.18, 0.16, 0.52]
+          : [-0.46, -0.02, 0.44];
+
+        for (let h = 0; h < numHeads; h++) {
+          const ang = spreadAngles[h] + (rng() - 0.5) * 0.15;
+          const isCenter = Math.abs(ang) < 0.24;
+          const len = (isCenter ? 42 : 32) + rng() * 12;
+          const startX = trunkBase.x1 + ang * 16;
+          const startY = trunkBase.y1 - Math.abs(ang) * 8;
+          const startZ = (h % 2 === 0 ? 1 : -1) * 4;
+
+          const endX = startX + Math.sin(ang) * len;
+          const endY = startY + Math.cos(ang) * len;
+          const endZ = startZ + (rng() - 0.5) * 8;
+          const headR = (isCenter ? 11.5 : 9.0) + rng() * 2.0;
+
+          const headSeg = this.createSegment({
+            parentId: trunkBase.id,
+            type: 'TRUNK_HEAD',
+            x0: startX, y0: startY, z0: startZ,
+            x1: endX, y1: endY, z1: endZ,
+            r0: headR,
+            r1: headR * 0.80,
+            woodiness: 0.96,
+            generation: 0,
+            curT: 1.0,
+            hasChopScar: true,
+            scarStyle: h === 0 ? 'DARK_PASTE' : 'CALLUS_BEVEL'
+          });
+
+          // Create 3-4 Buds around the collar & sides of each chopped trunk head!
+          // 2 buds start ACTIVE (sprouting in March 3月), while 2 start DORMANT (waiting in reserve if you prune!)
+          const budOffsets = [-0.52, 0.05, 0.52, (rng() > 0.5 ? -0.82 : 0.82)];
+          for (let b = 0; b < budOffsets.length; b++) {
+            const bAng = ang * 0.75 + budOffsets[b] + (rng() - 0.5) * 0.14;
+            const attachFrac = b < 2 ? 0.92 : (0.55 + rng() * 0.3);
+            const bx = startX + (endX - startX) * attachFrac + Math.sin(bAng) * (headR * 0.65);
+            const by = startY + (endY - startY) * attachFrac;
+            const bz = startZ + (endZ - startZ) * attachFrac + (rng() - 0.5) * 6;
+
+            const isInitiallyActive = (b < 2);
+            this.buds.push({
+              id: `BUD_${this.nextId++}`,
+              parentSegId: headSeg.id,
+              attachFrac,
+              type: isInitiallyActive ? 'COLLAR_ACTIVE' : 'LATENT_TRUNK',
+              state: isInitiallyActive ? 'SWELLING' : 'DORMANT',
+              swell: isInitiallyActive ? (0.4 + rng() * 0.5) : 0.15,
+              x: bx, y: by, z: bz,
+              dirAngle: bAng, // Angle from vertical (+Y is up in 3D world)
+              dirZ: (rng() - 0.5) * 0.35,
+              generation: 1,
+              remainingInternodes: 3 + Math.floor(rng() * 2),
+              hasWire: (h === numHeads - 1 && b === 1)
+            });
+          }
+        }
+      }
+
+      createSegment(cfg) {
+        const seg = {
+          id: `SEG_${this.nextId++}`,
+          parentId: cfg.parentId || null,
+          type: cfg.type || 'INTERNODE', // 'TRUNK' | 'TRUNK_HEAD' | 'INTERNODE'
+          x0: cfg.x0, y0: cfg.y0, z0: cfg.z0 || 0,
+          x1: cfg.x1, y1: cfg.y1, z1: cfg.z1 || 0,
+          r0: cfg.r0 || 2.0,
+          r1: cfg.r1 || 1.6,
+          woodiness: cfg.woodiness !== undefined ? cfg.woodiness : 0.0,
+          generation: cfg.generation || 1,
+          internodeIdx: cfg.internodeIdx || 0,
+          curT: cfg.curT !== undefined ? cfg.curT : 0.02, // Elongation 0.0 -> 1.0
+          dirAngle: cfg.dirAngle || 0,
+          dirZ: cfg.dirZ || 0,
+          remainingInternodes: cfg.remainingInternodes || 0,
+          hasNodeFormed: cfg.curT >= 1.0,
+          hasChopScar: cfg.hasChopScar || false,
+          scarStyle: cfg.scarStyle || null,
+          hasWire: cfg.hasWire || false,
+          auxin: 0,
+          pruned: false,
+          childrenIds: [],
+          nodeBudIds: [],
+          nodeLeafIds: []
+        };
+        this.segments.push(seg);
+        this.SegmentMap.set(seg.id, seg);
+        if (seg.parentId && this.SegmentMap.has(seg.parentId)) {
+          this.SegmentMap.get(seg.parentId).childrenIds.push(seg.id);
+        }
+        return seg;
+      }
+
+      /*
+       * Main Causal Biological Simulation Tick (runs every frame when not paused).
+       * Replicates:
+       * 1. Apical Dominance (Auxin downward diffusion)
+       * 2. Sap Vigor & Dormant Bud Awakening (Compensation when branches are pruned)
+       * 3. Bud Swelling & Shoot Meristem Elongation
+       * 4. Opposite Phyllotaxy Leaf Emergence & Expansion (3月 Bronze -> 6月 Emerald)
+       * 5. Pipe-Model Secondary Trunk/Branch Thickening
+       */
+      stepBiology(dt) {
+        const rng = this.rng;
+        this.simDays += dt * 4.5;
+
+        // 1. Reset Auxin & Compute Apical Dominance
+        for (const seg of this.segments) {
+          seg.auxin = 0;
+        }
+
+        let activeMeristemCount = 0;
+        for (const seg of this.segments) {
+          if (seg.pruned) continue;
+          if (seg.type === 'INTERNODE' && seg.curT < 1.0) {
+            activeMeristemCount++;
+            this.propagateAuxinDown(seg.id, 1.0);
+          }
+        }
+        for (const bud of this.buds) {
+          if (bud.pruned || bud.state === 'SPENT') continue;
+          if (bud.state === 'SWELLING') {
+            activeMeristemCount++;
+            this.propagateAuxinDown(bud.parentSegId, 0.85);
           }
         }
 
-        // Leave a fresh green/cream cambium cut scar on the remaining parent stub (Photo 4!)
-        if (parent) {
-          parent.hasChopScar = true;
-          parent.scarStyle = 'FRESH_GREEN_CUT';
+        // 2. Sap Vigor Redistribution & Natural Bud Awakening:
+        // If active meristems are low (e.g., because the user pruned branches!),
+        // root pressure + stored sap immediately wakes up dormant buds on low-auxin segments!
+        const targetActiveMeristems = 7;
+        if (activeMeristemCount < targetActiveMeristems) {
+          const candidates = this.buds.filter(b => {
+            if (b.pruned || b.state !== 'DORMANT') return false;
+            const pSeg = this.SegmentMap.get(b.parentSegId);
+            if (!pSeg || pSeg.pruned || pSeg.curT < 0.95) return false;
+            return pSeg.auxin < 0.35; // Free from apical dominance!
+          });
+
+          // Prioritize buds right below a pruning cut (hasChopScar) or higher generation nodes, plus trunk back-buds!
+          candidates.sort((a, b) => {
+            const segA = this.SegmentMap.get(a.parentSegId);
+            const segB = this.SegmentMap.get(b.parentSegId);
+            const scoreA = (segA.hasChopScar ? 3.0 : 0) + segA.generation * 0.4 + rng() * 0.8;
+            const scoreB = (segB.hasChopScar ? 3.0 : 0) + segB.generation * 0.4 + rng() * 0.8;
+            return scoreB - scoreA;
+          });
+
+          const toWake = Math.min(candidates.length, targetActiveMeristems - activeMeristemCount);
+          for (let i = 0; i < toWake; i++) {
+            candidates[i].state = 'SWELLING';
+          }
+        }
+
+        // 3. Advance Swelling Buds -> Burst into New Internode Shoots!
+        for (const bud of this.buds) {
+          if (bud.pruned || bud.state !== 'SWELLING') continue;
+          const pSeg = this.SegmentMap.get(bud.parentSegId);
+          if (!pSeg || pSeg.pruned) {
+            bud.pruned = true;
+            continue;
+          }
+
+          bud.swell += dt * 0.85;
+          if (bud.swell >= 1.0) {
+            bud.state = 'SPENT';
+            this.sproutInternodeFromBud(bud, pSeg);
+          }
+        }
+
+        // 4. Elongate Active Internode Shoots & Form Opposite Nodes (Leaves + Axillary Buds)
+        for (const seg of this.segments) {
+          if (seg.pruned || seg.type !== 'INTERNODE') continue;
+
+          // Keep segment base locked to parent tip
+          if (seg.parentId && this.SegmentMap.has(seg.parentId)) {
+            const pSeg = this.SegmentMap.get(seg.parentId);
+            if (pSeg.type === 'INTERNODE') {
+              const dx = pSeg.x1 - seg.x0;
+              const dy = pSeg.y1 - seg.y0;
+              const dz = pSeg.z1 - seg.z0;
+              seg.x0 += dx; seg.y0 += dy; seg.z0 += dz;
+              seg.x1 += dx; seg.y1 += dy; seg.z1 += dz;
+            }
+          }
+
+          if (seg.curT < 1.0) {
+            seg.curT = Math.min(1.0, seg.curT + dt * 0.72);
+            if (seg.curT >= 1.0 && !seg.hasNodeFormed) {
+              seg.hasNodeFormed = true;
+              this.formOppositeNodeAtTip(seg);
+            }
+          }
+        }
+
+        // 5. Expand Leaves (3月 Bronze-Red -> 6月 Lush Emerald) & Pipe-Model Wood Thickening
+        for (const lf of this.leaves) {
+          if (lf.pruned) continue;
+          const pSeg = this.SegmentMap.get(lf.parentSegId);
+          if (!pSeg || pSeg.pruned) {
+            lf.pruned = true;
+            continue;
+          }
+
+          // Anchor leaf to its node on the parent segment
+          lf.x = pSeg.x0 + (pSeg.x1 - pSeg.x0) * lf.attachT;
+          lf.y = pSeg.y0 + (pSeg.y1 - pSeg.y0) * lf.attachT;
+          lf.z = pSeg.z0 + (pSeg.z1 - pSeg.z0) * lf.attachT;
+
+          // Leaf growth ontogeny
+          if (lf.age < 1.0) {
+            lf.age = Math.min(1.0, lf.age + dt * 0.28);
+          }
+
+          // Pipe Model: This leaf photosynthesizes and thickens every ancestral segment down to the trunk!
+          const sapContribution = (0.2 + 0.8 * lf.age) * dt * 0.014;
+          this.thickenAncestorPath(lf.parentSegId, sapContribution);
+        }
+      }
+
+      propagateAuxinDown(segId, amount) {
+        let curId = segId;
+        let curAux = amount;
+        while (curId && curAux > 0.05) {
+          const seg = this.SegmentMap.get(curId);
+          if (!seg || seg.pruned) break;
+          seg.auxin += curAux;
+          curId = seg.parentId;
+          curAux *= 0.68;
+        }
+      }
+
+      thickenAncestorPath(segId, sapDelta) {
+        let curId = segId;
+        let factor = 1.0;
+        while (curId) {
+          const seg = this.SegmentMap.get(curId);
+          if (!seg || seg.pruned) break;
+          const maxR = seg.type === 'TRUNK' ? 42.0 : (seg.type === 'TRUNK_HEAD' ? 22.0 : 12.0);
+          if (seg.r0 < maxR) {
+            seg.r0 += sapDelta * factor;
+            seg.r1 = Math.max(1.0, seg.r1 + sapDelta * factor * 0.82);
+          }
+          if (seg.type === 'INTERNODE') {
+            seg.woodiness = Math.min(0.95, seg.woodiness + sapDelta * 0.85);
+          }
+          curId = seg.parentId;
+          factor *= 1.08; // Trunk base accumulates the sum of all upper pipes!
+        }
+      }
+
+      sproutInternodeFromBud(bud, parentSeg) {
+        const rng = this.rng;
+        const gen = bud.generation || 1;
+        // Shorter internodes as ramification generation increases (authentic bonsai refinement!)
+        const len = (25 + rng() * 11) * Math.pow(0.84, Math.max(0, gen - 1));
+        // Gentle phototropic curve upward
+        const angle = bud.dirAngle * 0.92 + (rng() - 0.5) * 0.16;
+        const endX = bud.x + Math.sin(angle) * len;
+        const endY = bud.y + Math.cos(angle) * len;
+        const endZ = bud.z + Math.sin(bud.dirZ) * (len * 0.35);
+
+        const startR = Math.max(1.15, Math.min(2.4, parentSeg.r1 * 0.65));
+
+        this.createSegment({
+          parentId: parentSeg.id,
+          type: 'INTERNODE',
+          x0: bud.x, y0: bud.y, z0: bud.z,
+          x1: endX, y1: endY, z1: endZ,
+          r0: startR,
+          r1: Math.max(0.95, startR * 0.84),
+          woodiness: 0.05,
+          generation: gen,
+          internodeIdx: 0,
+          curT: 0.05,
+          dirAngle: angle,
+          dirZ: bud.dirZ,
+          remainingInternodes: bud.remainingInternodes - 1,
+          hasWire: bud.hasWire
+        });
+      }
+
+      /*
+       * Called the instant an internode reaches full length (curT == 1.0):
+       * Creates:
+       * 1. A pair of Opposite Palmate Maple Leaves (Filotaxis Opuesta)
+       * 2. A pair of Opposite Dormant Axillary Buds (ready to bifurcate in a Y if pruned!)
+       * 3. Continuation of the Apical Meristem if remainingInternodes > 0
+       */
+      formOppositeNodeAtTip(seg) {
+        const rng = this.rng;
+        const isTerminal = (seg.remainingInternodes <= 0);
+        // Smaller, more refined leaves on higher ramification generations
+        const ramScale = Math.pow(0.85, Math.max(0, seg.generation - 1));
+
+        // 1. Spawn Opposite Pair of Leaves + Opposite Axillary Buds
+        const sides = [-1, 1];
+        for (const side of sides) {
+          const leafAngle = seg.dirAngle + side * (0.68 + rng() * 0.28);
+          const leafId = `LF_${this.nextId++}`;
+          this.leaves.push({
+            id: leafId,
+            parentSegId: seg.id,
+            attachT: 0.98,
+            x: seg.x1, y: seg.y1, z: seg.z1,
+            side,
+            angle: leafAngle,
+            tiltZ: side * 0.25 + (rng() - 0.5) * 0.3,
+            maxRadius: (isTerminal ? (18 + rng() * 6) : (24 + rng() * 9)) * ramScale,
+            petioleLen: (isTerminal ? (9 + rng() * 4) : (13 + rng() * 6)) * ramScale,
+            age: 0.04, // Starts as tiny folded bronze-red March leaf (3月)!
+            shadeLayer: 0.45 + rng() * 0.55,
+            hueOffset: (rng() - 0.5) * 14,
+            pruned: false
+          });
+          seg.nodeLeafIds.push(leafId);
+
+          // Opposite Axillary Bud sitting in the leaf axil
+          const budAngle = seg.dirAngle + side * (0.48 + rng() * 0.16);
+          const axBud = {
+            id: `BUD_${this.nextId++}`,
+            parentSegId: seg.id,
+            attachFrac: 0.98,
+            type: 'AXILLARY',
+            state: 'DORMANT', // Kept asleep by apical dominance until you prune above it!
+            swell: 0.2,
+            x: seg.x1 + side * (seg.r1 * 0.9),
+            y: seg.y1,
+            z: seg.z1 + side * 1.5,
+            dirAngle: budAngle,
+            dirZ: seg.dirZ + (rng() - 0.5) * 0.3,
+            generation: seg.generation + 1,
+            remainingInternodes: 2 + (rng() > 0.5 ? 1 : 0),
+            hasWire: false,
+            pruned: false
+          };
+          this.buds.push(axBud);
+          seg.nodeBudIds.push(axBud.id);
+        }
+
+        // 2. If apical meristem still has momentum, continue elongating into the next internode!
+        if (seg.remainingInternodes > 0) {
+          const nextLen = (23 + rng() * 10) * Math.pow(0.85, Math.max(0, seg.generation - 1));
+          const nextAng = seg.dirAngle + (rng() - 0.5) * 0.20;
+          const endX = seg.x1 + Math.sin(nextAng) * nextLen;
+          const endY = seg.y1 + Math.cos(nextAng) * nextLen;
+          const endZ = seg.z1 + Math.sin(seg.dirZ) * (nextLen * 0.3);
+
+          this.createSegment({
+            parentId: seg.id,
+            type: 'INTERNODE',
+            x0: seg.x1, y0: seg.y1, z0: seg.z1,
+            x1: endX, y1: endY, z1: endZ,
+            r0: seg.r1,
+            r1: Math.max(0.9, seg.r1 * 0.85),
+            woodiness: 0.0,
+            generation: seg.generation,
+            internodeIdx: seg.internodeIdx + 1,
+            curT: 0.02,
+            dirAngle: nextAng,
+            dirZ: seg.dirZ,
+            remainingInternodes: seg.remainingInternodes - 1,
+            hasWire: seg.hasWire && seg.internodeIdx < 2
+          });
+        }
+      }
+
+      /*
+       * Prunes a segment and all its descendants (`✂️ PODAR RAMA`):
+       * - Severs the branch/shoot from that internode outward.
+       * - Leaves a fresh green-white cambium cut scar on the parent stub (Photo 4!).
+       * - IMMEDIATELY awakens the opposite axillary buds on the parent stub AND
+       *   stimulates dormant buds elsewhere on the tree to compensate for the lost foliage!
+       */
+      pruneSegment(segId) {
+        const seg = this.SegmentMap.get(segId);
+        if (!seg || seg.pruned || seg.type === 'TRUNK' || seg.type === 'TRUNK_HEAD') return false;
+
+        const descSegIds = [];
+        this.collectDescendants(segId, descSegIds);
+
+        const affectedBuds = [];
+        const affectedLeaves = [];
+        const parentSeg = seg.parentId ? this.SegmentMap.get(seg.parentId) : null;
+
+        for (const id of descSegIds) {
+          const s = this.SegmentMap.get(id);
+          if (!s || s.pruned) continue;
+          s.pruned = true;
+
+          // Add falling clipping particle
+          this.fallingClips.push({
+            x: (s.x0 + s.x1) * 0.5,
+            y: (s.y0 + s.y1) * 0.5,
+            z: s.z1,
+            vx: (Math.random() - 0.5) * 1.5,
+            vy: -0.5,
+            r: 8.0,
+            alpha: 1.0
+          });
+
+          for (const b of this.buds) {
+            if (b.parentSegId === id && !b.pruned) {
+              b.pruned = true;
+              affectedBuds.push(b.id);
+            }
+          }
+          for (const l of this.leaves) {
+            if (l.parentSegId === id && !l.pruned) {
+              l.pruned = true;
+              affectedLeaves.push(l.id);
+            }
+          }
+        }
+
+        const wokeBudIds = [];
+        if (parentSeg) {
+          const prevScar = parentSeg.hasChopScar;
+          const prevStyle = parentSeg.scarStyle;
+          parentSeg.hasChopScar = true;
+          parentSeg.scarStyle = 'FRESH_GREEN_CUT';
+
+          // 1. Wake up BOTH opposite axillary buds at the tip of parentSeg (True Maple Y-Bifurcation!)
+          for (const b of this.buds) {
+            if (b.parentSegId === parentSeg.id && !b.pruned && b.state === 'DORMANT') {
+              b.state = 'SWELLING';
+              b.swell = Math.max(b.swell, 0.35);
+              wokeBudIds.push(b.id);
+            }
+          }
+
+          // 2. If parentSeg had no dormant buds (e.g., cut right at the trunk head),
+          // wake up 2 dormant buds on the trunk or other branches (Back-budding / Brotación compensatoria!)
+          if (wokeBudIds.length < 2) {
+            const extraBuds = this.buds.filter(b => !b.pruned && b.state === 'DORMANT');
+            extraBuds.sort(() => this.rng() - 0.5);
+            for (let i = 0; i < Math.min(2, extraBuds.length); i++) {
+              extraBuds[i].state = 'SWELLING';
+              extraBuds[i].swell = 0.35;
+              wokeBudIds.push(extraBuds[i].id);
+            }
+
+            // Also spawn a fresh adventitious bud right at the collar of the cut if cut near the trunk!
+            if (parentSeg.type === 'TRUNK_HEAD') {
+              for (const side of [-1, 1]) {
+                const newBud = {
+                  id: `BUD_${this.nextId++}`,
+                  parentSegId: parentSeg.id,
+                  attachFrac: 0.90,
+                  type: 'ADVENTITIOUS',
+                  state: 'SWELLING',
+                  swell: 0.30,
+                  x: seg.x0 + side * 4.5,
+                  y: seg.y0 - 2.0,
+                  z: seg.z0,
+                  dirAngle: seg.dirAngle + side * (0.45 + this.rng() * 0.25),
+                  dirZ: (this.rng() - 0.5) * 0.3,
+                  generation: 1,
+                  remainingInternodes: 3,
+                  hasWire: false,
+                  pruned: false
+                };
+                this.buds.push(newBud);
+                wokeBudIds.push(newBud.id);
+              }
+            }
+          }
+
+          this.undoStack.push({
+            descSegIds,
+            affectedBuds,
+            affectedLeaves,
+            wokeBudIds,
+            parentId: parentSeg.id,
+            prevScar,
+            prevStyle
+          });
         }
 
         return true;
       }
 
       /*
-       * Pinch / Defoliate (Metsumi / Mekiri):
-       * Removes the outer leaves on the hovered internode or trims the apical tip,
-       * letting light into the interior and reducing leaf size.
+       * Pinches an apical shoot tip or manually awakens a dormant bud (`🤏 PINZAR / ACTIVAR YEMA`)
        */
-      pinchNode(nodeId) {
-        const node = this.nodes.get(nodeId);
-        if (!node || node.pruned || !node.leaves) return false;
+      pinchOrWakeBud(segId) {
+        const seg = this.SegmentMap.get(segId);
+        if (!seg || seg.pruned) return false;
 
-        const activeLeaves = node.leaves.filter(l => !l.pruned);
-        if (activeLeaves.length > 0) {
-          this.history.push({
-            action: 'PINCH',
-            nodeId,
-            prevPrunedStates: node.leaves.map(l => l.pruned)
-          });
-          for (const lf of node.leaves) {
-            lf.pruned = true;
+        // Wake any dormant axillary buds on this segment and stop further apical elongation
+        seg.remainingInternodes = 0;
+        let wokeAny = false;
+        for (const b of this.buds) {
+          if (b.parentSegId === seg.id && !b.pruned && b.state === 'DORMANT') {
+            b.state = 'SWELLING';
+            b.swell = 0.45;
+            wokeAny = true;
           }
-          return true;
         }
-        return false;
+        // Or defoliate large leaves on this node to let light into interior buds
+        for (const l of this.leaves) {
+          if (l.parentSegId === seg.id && !l.pruned && l.age > 0.6) {
+            l.pruned = true;
+            wokeAny = true;
+          }
+        }
+        return wokeAny;
       }
 
-      collectDescendantIds(nodeId, list) {
-        list.push(nodeId);
-        const node = this.nodes.get(nodeId);
-        if (node) {
-          for (const cid of node.childrenIds) {
-            this.collectDescendantIds(cid, list);
+      burstSpringFlush() {
+        // Awaken up to 4 dormant buds across the tree and boost growth
+        const dormant = this.buds.filter(b => !b.pruned && b.state === 'DORMANT');
+        dormant.sort(() => this.rng() - 0.5);
+        for (let i = 0; i < Math.min(4, dormant.length); i++) {
+          dormant[i].state = 'SWELLING';
+          dormant[i].swell = 0.5;
+        }
+        for (let step = 0; step < 35; step++) {
+          this.stepBiology(0.05);
+        }
+      }
+
+      collectDescendants(segId, out) {
+        out.push(segId);
+        const seg = this.SegmentMap.get(segId);
+        if (seg) {
+          for (const cid of seg.childrenIds) {
+            this.collectDescendants(cid, out);
           }
         }
       }
 
       undo() {
-        if (this.history.length === 0) return false;
-        const last = this.history.pop();
-        if (last.action === 'PRUNE') {
-          for (const id of last.affectedIds) {
-            const n = this.nodes.get(id);
-            if (n) n.pruned = false;
-          }
-          const node = this.nodes.get(last.nodeId);
-          if (node && node.parentId) {
-            const parent = this.nodes.get(node.parentId);
-            if (parent) {
-              parent.hasChopScar = last.prevParentScar;
-              parent.scarStyle = last.prevParentScarStyle;
-            }
-          }
-          return true;
-        } else if (last.action === 'PINCH') {
-          const node = this.nodes.get(last.nodeId);
-          if (node && node.leaves) {
-            node.leaves.forEach((lf, i) => {
-              lf.pruned = last.prevPrunedStates[i];
-            });
-          }
-          return true;
+        if (this.undoStack.length === 0) return false;
+        const last = this.undoStack.pop();
+        for (const id of last.descSegIds) {
+          const s = this.SegmentMap.get(id);
+          if (s) s.pruned = false;
         }
-        return false;
+        for (const bid of last.affectedBuds) {
+          const b = this.buds.find(x => x.id === bid);
+          if (b) b.pruned = false;
+        }
+        for (const lid of last.affectedLeaves) {
+          const l = this.leaves.find(x => x.id === lid);
+          if (l) l.pruned = false;
+        }
+        for (const bid of last.wokeBudIds) {
+          const b = this.buds.find(x => x.id === bid);
+          if (b && b.state === 'SWELLING') b.state = 'DORMANT';
+        }
+        if (last.parentId && this.SegmentMap.has(last.parentId)) {
+          const p = this.SegmentMap.get(last.parentId);
+          p.hasChopScar = last.prevScar;
+          p.scarStyle = last.prevStyle;
+        }
+        return true;
       }
+    }
+
+    let bonsai = new LivingBonsaiOrganism(currentSeed, currentSpecies);
+    // Pre-grow initial spring canopy so user sees lush maple shoots & buds right away
+    for (let i = 0; i < 85; i++) {
+      bonsai.stepBiology(0.05);
     }
 
     /* ====================================================================
-       4. MONSTERA / IRIS SPECIMEN (SECONDARY OPTION IN SELECTOR)
-       ==================================================================== */
-    class MonsteraClump {
-      constructor(seed) {
-        this.seed = seed;
-        this.rng = createPRNG(seed);
-        this.petioles = [];
-        this.aerialRoots = [];
-        this.buildGenetics();
-      }
-      buildGenetics() {
-        const rng = this.rng;
-        const totalLeaves = 12 + Math.floor(rng() * 3);
-        const goldenAngles = [-0.12, 0.22, -0.38, 0.44, -0.05, -0.58, 0.62, 0.14, -0.28, 0.34, -0.48, 0.52, -0.18, 0.06];
-        for (let i = 0; i < totalLeaves; i++) {
-          const maturityOrder = i / (totalLeaves - 1);
-          const birthAge = i * (0.84 / totalLeaves) + 0.01;
-          const fullMaturityAge = Math.min(1.0, birthAge + 0.19);
-          const side = (i % 2 === 0 ? 1 : -1);
-          const fanAngle = goldenAngles[i % goldenAngles.length] + (rng() - 0.5) * 0.14;
-          const nodeX = Math.sin(i * 0.9) * 8 + (rng() - 0.5) * 5;
-          const nodeY = -6 - i * 8.5;
-          const maxPetioleLength = 75 + maturityOrder * 155 + (rng() - 0.5) * 20;
-          const maxBladeLength = 48 + maturityOrder * 92 + (rng() - 0.5) * 10;
-          const maxBladeWidth = 38 + maturityOrder * 82 + (rng() - 0.5) * 10;
-          let slitPairs = i >= 4 ? (i > 6 ? 3 : 1) : 0;
-          const slits = [];
-          for (let s = 0; s < slitPairs; s++) {
-            slits.push({
-              uCenter: 0.22 + (s / Math.max(1, slitPairs)) * 0.60,
-              uThickness: 0.04,
-              innerStartV: 0.24,
-              sideMask: 0
-            });
-          }
-          this.petioles.push({
-            index: i,
-            parentIndex: i === 0 ? -1 : i - 1,
-            nodeX, nodeY,
-            codeId: `L${String(i + 1).padStart(2, '0')}`,
-            maturityOrder, birthAge, fullMaturityAge,
-            side, fanAngle,
-            maxPetioleLength, maxBladeLength, maxBladeWidth,
-            geniculumDrop: fanAngle * 0.35,
-            slits,
-            hasInnerHoles: i >= 8,
-            leafSeed: Math.floor(rng() * 99999)
-          });
-        }
-      }
-    }
+       3. THREE.JS WEBGL GPU ASCII PROJECTION ENGINE (60-120 FPS)
+       ====================================================================
+       Architecture:
+       1. A 3D Three.js Scene with InstancedMesh pools for:
+          - Tapered 3D Cylinders (Trunk, Chopped Heads, Internode Stems, Petioles, Roots)
+          - 3D 5-Lobed Serrated Maple Leaf Geometry (Acer palmatum palmate star with veins)
+          - 3D Buds, Callus Scars & Tamahi Fertilizer Cakes
+       2. Rendered via an OrthographicCamera (planar projection) into a WebGLRenderTarget.
+       3. A Fullscreen WebGL Fragment Shader samples a High-Res ASCII Glyph Atlas Texture
+          and projects the 3D scene into razor-sharp, glowing ASCII characters on the GPU!
+    */
 
-    let currentBonsaiTree = new FractalBonsaiTree(currentSeed, currentSpecies);
-    let currentPlant = new MonsteraClump(currentSeed);
+    const container = document.getElementById('canvasContainer');
+    const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
+    renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    container.appendChild(renderer.domElement);
 
-    /* ====================================================================
-       5. HIGH-RES ASCII RENDERING ENGINE (ZERO FLOATING UI CLUTTER)
-       ==================================================================== */
+    // 1. Create High-Resolution 16x2 ASCII Glyph Atlas Texture (32 glyphs at 64x64px each)
+    function createAsciiFontAtlas() {
+      const atlasCanvas = document.createElement('canvas');
+      atlasCanvas.width = 1024;
+      atlasCanvas.height = 128;
+      const c = atlasCanvas.getContext('2d');
+      c.fillStyle = '#000000';
+      c.fillRect(0, 0, atlasCanvas.width, atlasCanvas.height);
 
-    let viewW = window.innerWidth || 960;
-    let viewH = window.innerHeight || 700;
-    let activeBonsaiTool = 'PRUNE';
-    let hoveredNodeId = null;
-    let hoveredDescendantSet = new Set();
-    let lastLiveGeom = new Map();
-
-    function resizeCanvas() {
-      const rect = canvas.parentElement.getBoundingClientRect();
-      viewW = Math.max(320, rect.width || window.innerWidth || 960);
-      viewH = Math.max(320, rect.height || window.innerHeight || 700);
-      const dpr = Math.min(2, window.devicePixelRatio || 1);
-      canvas.width = Math.floor(viewW * dpr);
-      canvas.height = Math.floor(viewH * dpr);
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    }
-    window.addEventListener('resize', resizeCanvas);
-    resizeCanvas();
-
-    function updateSeasonAndClock() {
-      if (isTimeLapse) {
-        growthProgress += 0.0014;
-        if (growthProgress >= 1.0) {
-          growthProgress = 1.0;
-          toggleTimeLapse(false);
-        }
-        ageSlider.value = growthProgress;
-      }
-
-      // Map growthProgress (0.04 -> 1.0) to Japanese Bonsai Calendar Months (3月 Mar -> 6月 Jun)
-      if (growthProgress < 0.25) {
-        ageDaysLabel.innerText = '3月 (MARZO)';
-        phaseLabel.innerText = '3月 (MAR) BROTACIÓN YEMAS';
-        phaseLabel.className = 'text-[#37ecc4]';
-      } else if (growthProgress < 0.52) {
-        ageDaysLabel.innerText = '4月 (ABRIL)';
-        phaseLabel.innerText = '4月 (ABR) ELONGACIÓN BROTES';
-        phaseLabel.className = 'text-[#67b8ff]';
-      } else if (growthProgress < 0.78) {
-        ageDaysLabel.innerText = '5月 (MAYO)';
-        phaseLabel.innerText = '5月 (MAY) EXPANSIÓN FOLIAR';
-        phaseLabel.className = 'text-[#89aaff]';
-      } else {
-        ageDaysLabel.innerText = '6月 (JUNIO)';
-        phaseLabel.innerText = '6月 (JUN) COPA DENSA / PODA';
-        phaseLabel.className = 'text-[#b294ff]';
-      }
-      seasonBadge.innerText = `AÑO ${currentBonsaiTree.seasonCount}`;
-    }
-
-    function renderBioCanvas() {
-      if (canvas.width === 0 || canvas.height === 0) resizeCanvas();
-      ctx.fillStyle = '#020305';
-      ctx.fillRect(0, 0, viewW, viewH);
-
-      const potRimX = viewW / 2;
-      const potRimY = viewH * 0.78;
-      const responsiveScale = Math.min(1.22, Math.max(0.68, Math.min(viewW / 640, viewH / 680)));
-
-      if (currentSpecies.startsWith('BONSAI')) {
-        renderBonsaiSpecimen(ctx, potRimX, potRimY, responsiveScale);
-      } else {
-        renderMonsteraSpecimen(ctx, potRimX, potRimY, responsiveScale);
-      }
-    }
-
-    function renderBonsaiSpecimen(c, potRimX, potRimY, scale) {
-      c.save();
-      c.translate(potRimX, potRimY);
-      c.scale(scale, scale);
-
-      // 1. Draw Terracotta / Glazed Bonsai Pot, Moss Mound & White Tamahi Fertilizer Cakes
-      drawBonsaiPotAndMoss(c, currentBonsaiTree);
-
-      // 2. Draw Muscular Nebari Surface Roots gripping the soil
-      const trunkThickFactor = Math.min(1.0, 0.78 + growthProgress * 0.22);
-      for (const root of currentBonsaiTree.nebariRoots) {
-        drawNebariRoot(c, root, trunkThickFactor);
-      }
-
-      // 3. Compute Live Continuous Geometry (Zero floating parts!)
-      const liveGeom = new Map();
-      const sortedNodes = Array.from(currentBonsaiTree.nodes.values()).sort((a, b) => a.birthAge - b.birthAge);
-      const leavesToRender = [];
-      let activeInternodeCount = 0;
-
-      for (const node of sortedNodes) {
-        if (node.pruned) continue;
-
-        let anchorX = node.p0x;
-        let anchorY = node.p0y;
-
-        if (node.parentId) {
-          const pGeom = liveGeom.get(node.parentId);
-          if (!pGeom) continue; // Parent not yet born
-          const reqT = node.parentAttachT !== undefined ? node.parentAttachT : 1.0;
-          if (pGeom.curT < reqT - 0.02) continue; // Parent hasn't reached insertion point yet!
-
-          const aPt = evalQuadBezier(pGeom.p0x, pGeom.p0y, pGeom.cpx, pGeom.cpy, pGeom.p1x, pGeom.p1y, Math.min(1.0, reqT));
-          anchorX = aPt.x;
-          anchorY = aPt.y;
-        }
-
-        if (growthProgress < node.birthAge) continue;
-
-        const span = Math.max(0.03, node.matureAge - node.birthAge);
-        const curT = Math.min(1.0, Math.max(0.02, (growthProgress - node.birthAge) / span));
-
-        // Translate original curve if anchor shifted slightly
-        const dx = anchorX - node.p0x;
-        const dy = anchorY - node.p0y;
-        const sub = getBezierSubCurve(
-          anchorX, anchorY,
-          node.cpx + dx, node.cpy + dy,
-          node.p1x + dx, node.p1y + dy,
-          curT
-        );
-
-        liveGeom.set(node.id, {
-          curT,
-          p0x: sub.p0x, p0y: sub.p0y,
-          cpx: sub.cpx, cpy: sub.cpy,
-          p1x: sub.p1x, p1y: sub.p1y,
-          node
-        });
-
-        const isCutPreview = hoveredDescendantSet.has(node.id);
-        const isCutRoot = (hoveredNodeId === node.id);
-
-        if (node.type === 'TRUNK' || node.type === 'TRUNK_HEAD') {
-          drawMuscularTrunkNode(c, node, sub, curT, trunkThickFactor);
-        } else {
-          activeInternodeCount++;
-          drawInternodeStem(c, node, sub, curT, trunkThickFactor, isCutPreview, isCutRoot);
-
-          // Collect leaves attached to the tip of this internode once the internode reaches >= 85% elongation
-          if (curT >= 0.82 && node.leaves && node.leaves.length > 0) {
-            for (const lf of node.leaves) {
-              if (lf.pruned) continue;
-              const lfSpan = Math.max(0.06, lf.fullLeafAge - lf.birthAge);
-              const rawLeafAge = (growthProgress - lf.birthAge) / lfSpan;
-              if (rawLeafAge <= 0.01) continue;
-              const leafAge = Math.min(1.0, Math.max(0.04, rawLeafAge));
-              leavesToRender.push({
-                stemX: sub.p1x,
-                stemY: sub.p1y,
-                leaf: lf,
-                leafAge,
-                isCutPreview: isCutPreview || (activeBonsaiTool === 'PINCH' && isCutRoot)
-              });
-            }
-          }
-        }
-      }
-
-      lastLiveGeom = liveGeom;
-
-      // 4. Sort and Render Leaves by depth layer (shaded interior leaves first, sunlit front leaves on top!)
-      leavesToRender.sort((a, b) => a.leaf.layerLight - b.leaf.layerLight);
-      for (const item of leavesToRender) {
-        drawSpeciesFoliage(c, item.stemX, item.stemY, item.leaf, item.leafAge, item.isCutPreview);
-      }
-
-      // 5. Render Falling Pruned Clippings Animation
-      for (let i = fallingClippings.length - 1; i >= 0; i--) {
-        const clip = fallingClippings[i];
-        clip.p0x += clip.vx;
-        clip.p1x += clip.vx;
-        clip.p0y += clip.vy;
-        clip.p1y += clip.vy;
-        clip.vy += 0.18; // Gravity
-        clip.alpha -= 0.032;
-
-        if (clip.alpha <= 0) {
-          fallingClippings.splice(i, 1);
-          continue;
-        }
-
-        c.save();
-        c.globalAlpha = Math.max(0, clip.alpha);
-        c.font = '5.5px "JetBrains Mono", monospace';
-        c.fillStyle = 'rgba(255, 110, 120, 0.9)';
-        c.fillText('/', (clip.p0x + clip.p1x) * 0.5, (clip.p0y + clip.p1y) * 0.5);
-        for (const lf of clip.leaves) {
-          drawSpeciesFoliage(c, clip.p1x, clip.p1y, lf, 0.65, true);
-        }
-        c.restore();
-      }
-
-      c.restore();
-
-      // Update Top Pill Telemetry
-      hudPetioles.innerText = `${leavesToRender.length}`;
-      hudFenestration.innerText = `${activeInternodeCount} NUDOS`;
-    }
-
-    /*
-     * Renders the muscular, heavily tapered woody trunk base & chopped trunk heads
-     * with vertical bark striations and realistic saw-cut calluses / grey cut paste (Photos 1, 2, 4).
-     */
-    function drawMuscularTrunkNode(c, node, sub, curT, thickFactor) {
-      const steps = 20;
-      c.font = '6px "JetBrains Mono", monospace';
-      c.textAlign = 'center';
-      c.textBaseline = 'middle';
-
-      for (let s = 0; s <= steps; s++) {
-        const t = s / steps;
-        const pt = evalQuadBezier(sub.p0x, sub.p0y, sub.cpx, sub.cpy, sub.p1x, sub.p1y, t);
-        const radius = (node.currentGirth * (1 - t) + node.endGirth * t) * thickFactor;
-
-        const nx = -Math.sin(pt.angle);
-        const ny = Math.cos(pt.angle);
-
-        for (let w = -radius; w <= radius; w += 2.3) {
-          const cylNorm = w / Math.max(1, radius); // -1 (left) to +1 (right)
-          const px = pt.x + nx * w;
-          const py = pt.y + ny * w;
-
-          // Solid dark silhouette occlusion
-          c.fillStyle = 'rgba(2, 4, 7, 0.92)';
-          c.fillRect(px - 1.3, py - 1.3, 2.6, 2.6);
-
-          // Cylindrical 3D bark shading + vertical striation ribs (like Photo 2 maple bark)
-          const ribWave = Math.sin(w * 0.55 + node.p0x * 0.2) * 0.14;
-          const light = Math.max(0.05, Math.cos((cylNorm + 0.28) * 1.38) + ribWave);
-          const isEdge = Math.abs(cylNorm) > 0.84;
-
-          let ch = CHARS_BARK[Math.abs(Math.floor(s + w * 2)) % CHARS_BARK.length];
-          if (isEdge) {
-            ch = cylNorm < 0 ? '(' : ')';
-            c.fillStyle = cylNorm < 0 ? 'rgba(215, 208, 192, 0.90)' : 'rgba(72, 82, 78, 0.78)';
-          } else if (light > 0.74) {
-            // Sunlit smooth silver-taupe Acer bark
-            c.fillStyle = 'rgba(202, 194, 176, 0.92)';
-            ch = s % 2 === 0 ? '|' : '#';
-          } else if (light > 0.44) {
-            c.fillStyle = 'rgba(148, 144, 130, 0.86)';
-            ch = '¦';
-          } else {
-            // Shaded mossy-slate bark
-            c.fillStyle = 'rgba(78, 86, 78, 0.80)';
-            ch = ':';
-          }
-          c.fillText(ch, px, py);
-        }
-      }
-
-      // Draw Heavy Chop Scar / Grey Cut Paste at the top of the woody trunk head (Photos 1, 2, 4)
-      if (node.hasChopScar && curT > 0.9) {
-        const scarX = sub.p1x;
-        const scarY = sub.p1y;
-        const scarW = node.endGirth * 0.78;
-
-        for (let sx = -scarW; sx <= scarW; sx += 2.2) {
-          for (let sy = -3.2; sy <= 3.2; sy += 2.0) {
-            if ((sx * sx) / (scarW * scarW) + (sy * sy) / (3.4 * 3.4) <= 1.0) {
-              c.fillStyle = 'rgba(4, 7, 10, 0.95)';
-              c.fillRect(scarX + sx - 1.2, scarY + sy - 1.2, 2.4, 2.4);
-
-              if (node.scarStyle === 'DARK_PASTE') {
-                // Dark grey Japanese cut-paste blob (like Photo 1, 2, 4)
-                c.fillStyle = sy < 0 ? 'rgba(115, 125, 138, 0.92)' : 'rgba(68, 76, 88, 0.92)';
-                c.fillText('@', scarX + sx, scarY + sy);
-              } else {
-                // Angled woody bevel chop with pale callus rim (Photo 2 right trunk head)
-                const isRim = Math.abs(sx) > scarW * 0.68 || Math.abs(sy) > 2.0;
-                c.fillStyle = isRim ? 'rgba(195, 210, 165, 0.94)' : 'rgba(225, 215, 185, 0.90)';
-                c.fillText(isRim ? '(' : '=', scarX + sx, scarY + sy);
-              }
-            }
-          }
-        }
-      }
-    }
-
-    /*
-     * Renders an individual Internode stem segment (entrenudo).
-     * Shows the transition from slender reddish-green spring shoot (Photo 1 & 2)
-     * to thickened green-barked structural stub (Photo 4) with node rings!
-     */
-    function drawInternodeStem(c, node, sub, curT, thickFactor, isCutPreview, isCutRoot) {
-      const steps = Math.max(5, Math.floor((node.length * curT) / 2.4));
-      c.font = '5.6px "JetBrains Mono", monospace';
-      c.textAlign = 'center';
-      c.textBaseline = 'middle';
-
-      for (let s = 0; s <= steps; s++) {
-        const t = s / steps;
-        const pt = evalQuadBezier(sub.p0x, sub.p0y, sub.cpx, sub.cpy, sub.p1x, sub.p1y, t);
-        const radius = Math.max(0.9, (node.currentGirth * (1 - t) + node.endGirth * t) * thickFactor);
-
-        const nx = -Math.sin(pt.angle);
-        const ny = Math.cos(pt.angle);
-
-        for (let w = -radius; w <= radius; w += 2.0) {
-          const px = pt.x + nx * w;
-          const py = pt.y + ny * w;
-
-          c.fillStyle = 'rgba(2, 5, 8, 0.85)';
-          c.fillRect(px - 1.1, py - 1.1, 2.2, 2.2);
-
-          if (isCutPreview) {
-            // Subtle coral-red tint on segments that will be severed upon clicking
-            c.fillStyle = 'rgba(255, 95, 110, 0.92)';
-            c.fillText('x', px, py);
-          } else if (node.woodiness > 0.55) {
-            // Semi-woody green-brown bark (like the thickened stubs in Photo 4)
-            c.fillStyle = w <= 0 ? 'rgba(155, 182, 130, 0.92)' : 'rgba(92, 128, 82, 0.84)';
-            c.fillText('|', px, py);
-          } else {
-            // Slender young Maple shoot: green base transitioning to reddish-coral towards the sun/tip (Photos 1 & 2)
-            const isReddishShoot = (t > 0.45 && node.depth >= 1);
-            c.fillStyle = isReddishShoot
-              ? 'rgba(215, 115, 95, 0.92)'
-              : (w <= 0 ? 'rgba(148, 215, 115, 0.92)' : 'rgba(95, 165, 82, 0.85)');
-            c.fillText(Math.abs(Math.cos(pt.angle)) > 0.6 ? '-' : '/', px, py);
-          }
-        }
-
-        // Render black anodized training wire coiled around wired branch (Photo 2 right shoot!)
-        if (node.hasWire && s % 3 === 1 && !isCutPreview) {
-          const wireW = Math.sin((s / steps) * Math.PI * 4.0) * (radius + 1.0);
-          c.fillStyle = 'rgba(225, 165, 110, 0.95)';
-          c.fillText('@', pt.x + nx * wireW, pt.y + ny * wireW);
-        }
-      }
-
-      // Draw Node Ring (anillo de entrenudo) at the tip of the internode
-      if (curT > 0.92 && !isCutPreview) {
-        c.fillStyle = 'rgba(185, 215, 155, 0.85)';
-        c.fillText('=', sub.p1x, sub.p1y);
-      }
-
-      // If this internode was pruned at its tip, draw the fresh green-white bevel cut face (Photo 4!)
-      if (node.hasChopScar && node.scarStyle === 'FRESH_GREEN_CUT' && !isCutPreview) {
-        c.font = '6.5px "JetBrains Mono", monospace';
-        // Outer green cambium ring + pale cream wood core (exactly like Photo 4!)
-        c.fillStyle = 'rgba(135, 225, 115, 0.96)';
-        c.fillText('(', sub.p1x - 2.5, sub.p1y - 1);
-        c.fillText(')', sub.p1x + 2.5, sub.p1y - 1);
-        c.fillStyle = 'rgba(235, 242, 205, 0.96)';
-        c.fillText('o', sub.p1x, sub.p1y - 1);
-      }
-
-      // Clean geometric cut-mark line right at the base of the hovered internode (No floating text!)
-      if (isCutRoot) {
-        c.save();
-        c.strokeStyle = activeBonsaiTool === 'PRUNE' ? '#ff5370' : '#37ecc4';
-        c.lineWidth = 1.6;
-        c.beginPath();
-        c.moveTo(sub.p0x - 8, sub.p0y - 6);
-        c.lineTo(sub.p0x + 8, sub.p0y + 6);
-        c.stroke();
-        c.restore();
-      }
-    }
-
-    /*
-     * Dispatches leaf rendering based on selected Bonsai species.
-     */
-    function drawSpeciesFoliage(c, stemX, stemY, leaf, leafAge, isCutPreview) {
-      const leafType = currentBonsaiTree.spec.leafType;
-      if (leafType === 'MAPLE_PALMATE') {
-        drawMaplePalmateLeaf(c, stemX, stemY, leaf, leafAge, isCutPreview);
-      } else if (leafType === 'PINE_NEEDLE') {
-        drawPineNeedleCluster(c, stemX, stemY, leaf, leafAge, isCutPreview);
-      } else {
-        drawElmSerratedLeaf(c, stemX, stemY, leaf, leafAge, isCutPreview);
-      }
-    }
-
-    /*
-     * AUTHENTIC 5-LOBED PALMATE JAPANESE MAPLE LEAF (ACER PALMATUM / MOMIJI)
-     * Matches Photos 1, 2, 3, 4, 5:
-     * 1. Long, slender reddish-coral petiole (pecíolo) emerging from the node.
-     * 2. 5 distinct pointed, serrated lobes radiating like an open hand from the leaf base:
-     *    - Central lobe (longest, 0°)
-     *    - Left & Right upper lateral lobes (±42°)
-     *    - Left & Right outer basal lobes (±82°)
-     * 3. Realistic Ontogeny:
-     *    - Early spring (leafAge < 0.35, 3月 Mar): Small, narrower lobe spread, warm bronze-red / salmon-amber tint.
-     *    - Late spring / June (leafAge 0.35..1.0, 6月 Jun): Large, broad 5-pointed star canopy in layered emerald greens.
-     */
-    function drawMaplePalmateLeaf(c, stemX, stemY, leaf, leafAge, isCutPreview) {
-      // 1. Slender Reddish Petiole (Pecíolo) connecting stem node to leaf lamina base
-      const petioleLen = leaf.maxPetioleLen * (0.25 + 0.75 * Math.pow(leafAge, 0.75));
-      const pEndX = stemX + Math.cos(leaf.petioleAngle) * petioleLen;
-      const pEndY = stemY + Math.sin(leaf.petioleAngle) * petioleLen + (2.5 * leafAge); // Subtle gravity droop
-      const pCtrlX = (stemX + pEndX) * 0.5;
-      const pCtrlY = (stemY + pEndY) * 0.5 - 1.5;
-
-      c.font = '5px "JetBrains Mono", monospace';
-      c.textAlign = 'center';
-      c.textBaseline = 'middle';
-
-      const pSteps = Math.max(3, Math.floor(petioleLen / 2.5));
-      for (let s = 1; s <= pSteps; s++) {
-        const t = s / pSteps;
-        const pt = evalQuadBezier(stemX, stemY, pCtrlX, pCtrlY, pEndX, pEndY, t);
-        c.fillStyle = isCutPreview ? 'rgba(255, 95, 110, 0.9)' : 'rgba(220, 85, 80, 0.88)';
-        c.fillText(t > 0.5 ? '-' : ':', pt.x, pt.y);
-      }
-
-      // 2. Render the 5 Pointed Serrated Lobes of Acer palmatum from (pEndX, pEndY)
-      const bladeRadius = leaf.maxRadius * (0.18 + 0.82 * Math.pow(leafAge, 0.82));
-      // As the leaf unfurls from March (leafAge ~ 0.1) to June (leafAge ~ 1.0), the 5 lobes fan open wider
-      const fanOpenFactor = 0.52 + 0.48 * Math.min(1.0, leafAge * 1.25);
-
-      const lobes = [
-        { relAngle: -1.42 * fanOpenFactor, lenScale: 0.54, widthScale: 0.21 }, // Basal Left Lobe
-        { relAngle:  1.42 * fanOpenFactor, lenScale: 0.54, widthScale: 0.21 }, // Basal Right Lobe
-        { relAngle: -0.72 * fanOpenFactor, lenScale: 0.86, widthScale: 0.25 }, // Lateral Left Lobe
-        { relAngle:  0.72 * fanOpenFactor, lenScale: 0.86, widthScale: 0.25 }, // Lateral Right Lobe
-        { relAngle:  0.00,                 lenScale: 1.00, widthScale: 0.27 }  // Central Dominant Lobe
+      // Row 0 (index 0..15): Density ramp from empty to solid botanical glyphs
+      // Row 1 (index 16..31): Directional contour & vein glyphs
+      const glyphs = [
+        ' ', '.', '·', ':', ';', '-', '=', '+', '*', 'o', '4', '6', '8', '0', '%', '#',
+        '(', ')', '/', '\\', '|', '¦', '_', '~', '^', 'v', '@', '!', 'x', 'w', '#', '@'
       ];
 
-      const isAutumn = (environment.seasonTheme === 'AUTUMN_MOMIJI');
-      // Young March leaves (< 0.36) have bronze-crimson/apricot tips (Photos 1 & 2!)
-      const springBronzeBlend = Math.max(0, 1 - (leafAge / 0.38));
+      c.font = 'bold 46px "JetBrains Mono", monospace';
+      c.textAlign = 'center';
+      c.textBaseline = 'middle';
+      c.fillStyle = '#ffffff';
 
-      c.font = '5.2px "JetBrains Mono", monospace';
+      for (let i = 0; i < 32; i++) {
+        const col = i % 16;
+        const row = Math.floor(i / 16);
+        const cx = col * 64 + 32;
+        const cy = row * 64 + 34;
+        c.fillText(glyphs[i], cx, cy);
+      }
 
-      for (let lIdx = 0; lIdx < lobes.length; lIdx++) {
-        const lobe = lobes[lIdx];
-        const lobeLen = bladeRadius * lobe.lenScale;
-        const lobeMaxHalfW = bladeRadius * lobe.widthScale;
-        const lobeWorldAngle = leaf.bladeAngle + lobe.relAngle;
+      const tex = new THREE.CanvasTexture(atlasCanvas);
+      tex.minFilter = THREE.LinearFilter;
+      tex.magFilter = THREE.LinearFilter;
+      tex.needsUpdate = true;
+      return tex;
+    }
 
-        c.save();
-        c.translate(pEndX, pEndY);
-        c.rotate(lobeWorldAngle);
+    // 2. Build 3D Botanical Scene & Orthographic Planar Camera
+    const bioScene = new THREE.Scene();
+    bioScene.background = new THREE.Color(0x000000);
 
-        const stepU = 2.6;
-        const stepV = 2.4;
-        const cols = Math.max(3, Math.floor(lobeLen / stepU));
+    let viewW = window.innerWidth;
+    let viewH = window.innerHeight;
+    let worldScale = 1.0;
 
-        for (let i = 0; i <= cols; i++) {
-          const u = i / cols; // 0 = palm center, 1 = sharp pointed lobe apex
+    const orthoCamera = new THREE.OrthographicCamera(-300, 300, 350, -90, -500, 500);
+    orthoCamera.position.set(0, 0, 200);
+    orthoCamera.lookAt(0, 0, 0);
 
-          // Lanceolate-diamond maple lobe silhouette with sharp serrated marginal teeth
-          const serrationTeeth = 1.0 + Math.sin(i * 2.7) * 0.22;
-          const baseFusion = u < 0.22 ? 0.55 + u * 2.0 : Math.sin(Math.pow(u, 0.68) * Math.PI);
-          const acuminateTip = 1.0 - Math.pow(u, 2.2) * 0.35;
-          const halfW = lobeMaxHalfW * baseFusion * acuminateTip * serrationTeeth;
+    // Lighting for 3D cylindrical bark & leaf shading
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.52);
+    bioScene.add(ambientLight);
 
-          const rowSpan = Math.max(0, Math.round(halfW / stepV));
+    const sunLight = new THREE.DirectionalLight(0xfff8e7, 0.95);
+    sunLight.position.set(-140, 220, 180);
+    bioScene.add(sunLight);
 
-          for (let j = -rowSpan; j <= rowSpan; j++) {
-            const px = u * lobeLen;
-            const py = j * stepV;
+    const rimLight = new THREE.DirectionalLight(0x50e3c2, 0.32);
+    rimLight.position.set(160, 80, -100);
+    bioScene.add(rimLight);
 
-            // Dark background occlusion so front leaves stand out in crisp relief over back leaves (Photos 3 & 5)
-            c.fillStyle = 'rgba(2, 5, 8, 0.82)';
-            c.fillRect(px - 1.25, py - 1.25, 2.5, 2.5);
+    // 3. Create Custom 5-Lobed Palmate Maple Leaf 3D BufferGeometry (Acer palmatum)
+    function createPalmateMapleLeafGeometry() {
+      const positions = [];
+      const normals = [];
+      const colors = [];
 
-            const isMainVein = (j === 0 && u < 0.88);
-            const isSerratedMargin = (Math.abs(j) === rowSpan && rowSpan > 0) || i === cols;
+      // 5 radiating lobes of a Japanese Maple leaf: Basal L/R, Lateral L/R, Central
+      const lobes = [
+        { ang: -1.40, len: 0.56, wid: 0.20 },
+        { ang:  1.40, len: 0.56, wid: 0.20 },
+        { ang: -0.70, len: 0.86, wid: 0.25 },
+        { ang:  0.70, len: 0.86, wid: 0.25 },
+        { ang:  0.00, len: 1.00, wid: 0.27 }
+      ];
 
-            let glyph;
-            if (isCutPreview) {
-              c.fillStyle = isMainVein ? 'rgba(255, 180, 185, 0.95)' : 'rgba(255, 85, 105, 0.88)';
-              glyph = isMainVein ? '-' : 'x';
-            } else {
-              // Calculate authentic Acer palmatum color
-              let hue, sat, light;
-              if (isAutumn) {
-                hue = 8 + leaf.hueShift + u * 18;
-                sat = 88;
-                light = 38 + leaf.layerLight * 24;
-              } else if (springBronzeBlend > 0.05) {
-                // Transition from March bronze-red/amber (hue ~22) to May/June emerald green (hue ~116)
-                const tipBronze = Math.min(1, springBronzeBlend * (0.6 + u * 0.7));
-                hue = (24 * tipBronze) + ((114 + leaf.hueShift) * (1 - tipBronze));
-                sat = 78 + (1 - tipBronze) * 10;
-                light = 36 + leaf.layerLight * 26 + (isMainVein ? 14 : 0);
-              } else {
-                // Lush June Emerald Canopy (Photos 3 & 5): shaded forest interior vs sunlit lime-emerald exterior
-                hue = 106 + (1 - leaf.layerLight) * 22 + leaf.hueShift - u * 8;
-                sat = 76 + leaf.layerLight * 14;
-                light = 28 + leaf.layerLight * 32 + (1 - Math.abs(j) / Math.max(1, rowSpan + 1)) * 8;
-              }
+      for (const lobe of lobes) {
+        const steps = 6;
+        const cosA = Math.cos(lobe.ang);
+        const sinA = Math.sin(lobe.ang);
 
-              if (isMainVein) {
-                glyph = '-';
-                c.fillStyle = `hsla(${(hue - 12).toFixed(0)}, 90%, ${Math.min(78, light + 18).toFixed(0)}%, 0.96)`;
-              } else if (isSerratedMargin) {
-                glyph = i === cols ? '*' : (j > 0 ? '/' : '\\');
-                c.fillStyle = `hsla(${hue.toFixed(0)}, ${sat.toFixed(0)}%, ${Math.min(72, light + 6).toFixed(0)}%, 0.94)`;
-              } else {
-                glyph = CHARS_BLADE_FILL[(i * 3 + Math.abs(j) + leaf.seed + lIdx) % CHARS_BLADE_FILL.length];
-                c.fillStyle = `hsla(${hue.toFixed(0)}, ${sat.toFixed(0)}%, ${light.toFixed(0)}%, 0.92)`;
-              }
-            }
+        for (let s = 0; s < steps; s++) {
+          const u0 = s / steps;
+          const u1 = (s + 1) / steps;
 
-            c.fillText(glyph, px, py);
+          // Serrated sawtooth width profile
+          const tooth0 = 1.0 + (s % 2 === 1 ? 0.22 : -0.08);
+          const tooth1 = 1.0 + ((s + 1) % 2 === 1 ? 0.22 : -0.08);
+          const w0 = lobe.wid * Math.sin(Math.pow(u0, 0.65) * Math.PI) * tooth0;
+          const w1 = lobe.wid * Math.sin(Math.pow(u1, 0.65) * Math.PI) * tooth1;
+
+          const l0 = u0 * lobe.len;
+          const l1 = u1 * lobe.len;
+
+          const toWorld = (localL, localW, zHeight) => {
+            const x = localL * sinA + localW * cosA;
+            const y = localL * cosA - localW * sinA;
+            return [x, y, zHeight];
+          };
+
+          // Central vein ridge is slightly elevated in Z for 3D normal contrast
+          const c0 = toWorld(l0, 0, 0.08);
+          const c1 = toWorld(l1, 0, 0.08);
+          const left0 = toWorld(l0, -w0, 0.0);
+          const left1 = toWorld(l1, -w1, 0.0);
+          const right0 = toWorld(l0, w0, 0.0);
+          const right1 = toWorld(l1, w1, 0.0);
+
+          const pushTri = (pA, pB, pC, cA, cB, cC, nZ) => {
+            positions.push(...pA, ...pB, ...pC);
+            normals.push(0, 0.25, nZ, 0, 0.25, nZ, 0, 0.25, nZ);
+            colors.push(...cA, ...cB, ...cC);
+          };
+
+          const veinCol = [1.32, 1.38, 1.15]; // Bright midrib vein highlight
+          const bodyCol = [0.92, 0.96, 0.90];
+          const edgeCol = [1.12, 1.18, 1.05];
+
+          // Left half of lobe segment
+          pushTri(c0, left0, c1, veinCol, edgeCol, veinCol, 0.95);
+          pushTri(left0, left1, c1, edgeCol, edgeCol, veinCol, 0.95);
+          // Right half of lobe segment
+          pushTri(c0, c1, right0, veinCol, veinCol, edgeCol, 0.85);
+          pushTri(right0, c1, right1, edgeCol, veinCol, edgeCol, 0.85);
+        }
+      }
+
+      const geom = new THREE.BufferGeometry();
+      geom.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+      geom.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+      geom.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+      return geom;
+    }
+
+    // 4. InstancedMesh Pools (Zero per-frame allocations!)
+    const MAX_CYLINDERS = 1500;
+    const MAX_SPHERES = 1000;
+    const MAX_LEAVES = 1500;
+
+    const cylGeom = new THREE.CylinderGeometry(0.82, 1.0, 1.0, 8, 1);
+    const cylMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
+    const cylInstanced = new THREE.InstancedMesh(cylGeom, cylMat, MAX_CYLINDERS);
+    cylInstanced.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    bioScene.add(cylInstanced);
+
+    const sphereGeom = new THREE.SphereGeometry(1.0, 8, 6);
+    const sphereMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
+    const sphereInstanced = new THREE.InstancedMesh(sphereGeom, sphereMat, MAX_SPHERES);
+    sphereInstanced.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    bioScene.add(sphereInstanced);
+
+    const mapleLeafGeom = createPalmateMapleLeafGeometry();
+    const mapleLeafMat = new THREE.MeshLambertMaterial({ color: 0xffffff, vertexColors: true, side: THREE.DoubleSide });
+    const leafInstanced = new THREE.InstancedMesh(mapleLeafGeom, mapleLeafMat, MAX_LEAVES);
+    leafInstanced.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    bioScene.add(leafInstanced);
+
+    // 5. Static Pot & Moss Mound Meshes in the 3D Scene
+    const potGroup = new THREE.Group();
+    bioScene.add(potGroup);
+
+    function buildPotAndMossMeshes() {
+      // Domed green moss mound on top of pot
+      const mossGeom = new THREE.CylinderGeometry(96, 102, 10, 24, 1);
+      const mossMat = new THREE.MeshLambertMaterial({ color: 0x56a84c });
+      const mossMesh = new THREE.Mesh(mossGeom, mossMat);
+      mossMesh.position.set(0, -4, -5);
+      potGroup.add(mossMesh);
+
+      // Terracotta Pot Rim Lip
+      const lipGeom = new THREE.CylinderGeometry(108, 106, 6, 24, 1);
+      const lipMat = new THREE.MeshLambertMaterial({ color: 0xd48866 });
+      const lipMesh = new THREE.Mesh(lipGeom, lipMat);
+      lipMesh.position.set(0, -9, 0);
+      potGroup.add(lipMesh);
+
+      // Terracotta Pot Body
+      const bodyGeom = new THREE.CylinderGeometry(102, 84, 38, 24, 1);
+      const bodyMat = new THREE.MeshLambertMaterial({ color: 0xb26244 });
+      const bodyMesh = new THREE.Mesh(bodyGeom, bodyMat);
+      bodyMesh.position.set(0, -29, 0);
+      potGroup.add(bodyMesh);
+
+      // Pot Feet (Left & Right)
+      const footGeom = new THREE.BoxGeometry(24, 6, 30);
+      const footMat = new THREE.MeshLambertMaterial({ color: 0x8a4830 });
+      const leftFoot = new THREE.Mesh(footGeom, footMat);
+      leftFoot.position.set(-64, -50, 0);
+      const rightFoot = new THREE.Mesh(footGeom, footMat);
+      rightFoot.position.set(64, -50, 0);
+      potGroup.add(leftFoot, rightFoot);
+    }
+    buildPotAndMossMeshes();
+
+    // 6. Fullscreen WebGL Post-Processing ASCII Shader Pass
+    let sceneRT = new THREE.WebGLRenderTarget(512, 512, {
+      minFilter: THREE.LinearFilter,
+      magFilter: THREE.LinearFilter,
+      format: THREE.RGBAFormat
+    });
+
+    const asciiAtlasTex = createAsciiFontAtlas();
+
+    const asciiPostScene = new THREE.Scene();
+    const asciiPostCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+
+    const asciiShaderMat = new THREE.ShaderMaterial({
+      uniforms: {
+        tScene: { value: sceneRT.texture },
+        tAscii: { value: asciiAtlasTex },
+        uResolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
+        uCellSize: { value: new THREE.Vector2(6.5, 8.5) }
+      },
+      vertexShader: `
+        varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          gl_Position = vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        precision highp float;
+        uniform sampler2D tScene;
+        uniform sampler2D tAscii;
+        uniform vec2 uResolution;
+        uniform vec2 uCellSize;
+        varying vec2 vUv;
+
+        float getLuma(vec3 c) {
+          return dot(c, vec3(0.299, 0.587, 0.114));
+        }
+
+        void main() {
+          vec2 pixelPos = vUv * uResolution;
+          vec2 cellIndex = floor(pixelPos / uCellSize);
+          vec2 cellFract = fract(pixelPos / uCellSize);
+          vec2 cellCenterUV = (cellIndex + 0.5) * uCellSize / uResolution;
+
+          vec4 centerSample = texture2D(tScene, cellCenterUV);
+          float luma = getLuma(centerSample.rgb);
+
+          // Pure dark background outside the specimen
+          if (luma < 0.025) {
+            gl_FragColor = vec4(0.008, 0.012, 0.02, 1.0);
+            return;
           }
-        }
 
-        c.restore();
-      }
-    }
+          // Sample neighbor cells to detect silhouette edges, bark contours & leaf veins
+          vec2 stepUV = uCellSize / uResolution;
+          float lL = getLuma(texture2D(tScene, cellCenterUV + vec2(-stepUV.x, 0.0)).rgb);
+          float lR = getLuma(texture2D(tScene, cellCenterUV + vec2( stepUV.x, 0.0)).rgb);
+          float lU = getLuma(texture2D(tScene, cellCenterUV + vec2(0.0,  stepUV.y)).rgb);
+          float lD = getLuma(texture2D(tScene, cellCenterUV + vec2(0.0, -stepUV.y)).rgb);
 
-    function drawElmSerratedLeaf(c, stemX, stemY, leaf, leafAge, isCutPreview) {
-      c.save();
-      c.translate(stemX, stemY);
-      c.rotate(leaf.bladeAngle);
-      const len = leaf.maxRadius * 0.75 * leafAge;
-      const halfW = len * 0.52;
-      c.font = '5.2px "JetBrains Mono", monospace';
-      c.textAlign = 'center';
-      const cols = Math.max(3, Math.floor(len / 2.6));
-      for (let i = 0; i <= cols; i++) {
-        const u = i / cols;
-        const rowSpan = Math.round((halfW * Math.sin(u * Math.PI)) / 2.5);
-        for (let j = -rowSpan; j <= rowSpan; j++) {
-          const px = u * len;
-          const py = j * 2.5;
-          c.fillStyle = 'rgba(2, 5, 8, 0.82)';
-          c.fillRect(px - 1.2, py - 1.2, 2.4, 2.4);
-          c.fillStyle = isCutPreview
-            ? 'rgba(255, 95, 110, 0.9)'
-            : `hsla(${115 + leaf.hueShift}, 82%, ${34 + leaf.layerLight * 28}%, 0.92)`;
-          c.fillText(j === 0 ? '-' : (Math.abs(j) === rowSpan ? '/' : '0'), px, py);
-        }
-      }
-      c.restore();
-    }
+          float gx = lR - lL;
+          float gy = lU - lD;
+          float edgeMag = sqrt(gx * gx + gy * gy);
 
-    function drawPineNeedleCluster(c, stemX, stemY, leaf, leafAge, isCutPreview) {
-      const needleLen = leaf.maxRadius * 0.85 * leafAge;
-      c.font = '5.2px "JetBrains Mono", monospace';
-      c.textAlign = 'center';
-      for (let n = -3; n <= 3; n++) {
-        const ang = leaf.bladeAngle + n * 0.24;
-        const steps = Math.max(3, Math.floor(needleLen / 2.6));
-        for (let s = 1; s <= steps; s++) {
-          const px = stemX + Math.cos(ang) * (s * 2.6);
-          const py = stemY + Math.sin(ang) * (s * 2.6);
-          c.fillStyle = isCutPreview
-            ? 'rgba(255, 95, 110, 0.9)'
-            : `hsla(${138 + n * 4}, 75%, ${32 + leaf.layerLight * 26}%, 0.92)`;
-          c.fillText('/', px, py);
-        }
-      }
-    }
+          float glyphCol = 0.0;
+          float glyphRow = 0.0; // Row 0 in UV (top row is y in [0.5, 1.0] in WebGL CanvasTexture)
 
-    function drawBonsaiPotAndMoss(c, tree) {
-      const topW = 104;
-      const potH = 48;
-      const isTerracotta = tree.spec.potColor === 'TERRACOTTA';
+          // Deterministic cell hash for organic ASCII character variety
+          float cellHash = fract(sin(dot(cellIndex, vec2(12.9898, 78.233))) * 43758.5453);
 
-      // 1. Domed Organic Soil & Green Moss Mound on top of the pot rim
-      c.font = '6px "JetBrains Mono", monospace';
-      c.textAlign = 'center';
-      const mossChars = ['*', '·', ':', 'w', '"', '°'];
-      for (let my = -8; my <= 5; my += 2.5) {
-        const domeProgress = (my + 8) / 13;
-        const halfSpan = topW * Math.sin(Math.max(0.18, domeProgress) * Math.PI * 0.5) * 0.94;
-        for (let mx = -halfSpan; mx <= halfSpan; mx += 3.0) {
-          const isGreenMoss = Math.sin(mx * 0.18 + my * 0.5) > 0.05;
-          c.fillStyle = isGreenMoss
-            ? 'rgba(105, 198, 92, 0.78)'
-            : 'rgba(138, 108, 78, 0.72)';
-          c.fillText(mossChars[Math.abs(Math.floor(mx + my * 3)) % mossChars.length], mx, my);
-        }
-      }
-
-      // 2. Round White/Cream Organic Fertilizer Cakes (Tamahi / Biogold) on the soil rim (Photos 1, 2, 3, 5!)
-      if (tree.fertilizerPellets) {
-        for (const p of tree.fertilizerPellets) {
-          for (let py = -p.ry; py <= p.ry; py += 2.0) {
-            for (let px = -p.rx; px <= p.rx; px += 2.2) {
-              if ((px * px) / (p.rx * p.rx) + (py * py) / (p.ry * p.ry) <= 1.0) {
-                c.fillStyle = 'rgba(4, 6, 9, 0.9)';
-                c.fillRect(p.x + px - 1.1, p.y + py - 1.1, 2.2, 2.2);
-                const domeShade = 1.0 - (py + p.ry) / (2 * p.ry) * 0.35;
-                c.fillStyle = `rgba(235, 228, 210, ${(0.65 + domeShade * 0.3).toFixed(2)})`;
-                c.fillText(py < 0 ? '#' : ':', p.x + px, p.y + py);
-              }
-            }
-          }
-        }
-      }
-
-      // 3. Bonsai Ceramic Pot (Warm Terracotta Tokoname Pot matching Photos 1, 2, 3, 5)
-      for (let y = 5; y <= potH; y += 3.2) {
-        const v = (y - 5) / (potH - 5);
-        const halfW = topW * (1 - v * 0.18);
-        const isLip = y <= 9.5;
-        const isFootZone = y > potH - 6;
-
-        for (let x = -halfW; x <= halfW; x += 3.1) {
-          if (isFootZone && Math.abs(x) < halfW * 0.62) continue;
-
-          const normX = x / halfW;
-          const isEdge = Math.abs(x) >= halfW - 3.2 || isLip || y >= potH - 3.2;
-          const light = Math.max(0.15, Math.cos((normX + 0.22) * 1.35) * 0.75 + (1 - v) * 0.25);
-
-          if (isTerracotta) {
-            if (isEdge) {
-              c.fillStyle = isLip ? 'rgba(212, 138, 105, 0.90)' : 'rgba(145, 82, 58, 0.82)';
-              c.fillText(isLip ? '=' : '|', x, y);
+          if (edgeMag > 0.24) {
+            // Directional contour / vein glyph (Row 1)
+            glyphRow = 1.0;
+            if (abs(gx) > abs(gy) * 1.4) {
+              glyphCol = gx > 0.0 ? 0.0 : 1.0; // '(' or ')'
+            } else if (abs(gy) > abs(gx) * 1.4) {
+              glyphCol = 6.0; // '_' / '-'
             } else {
-              c.fillStyle = `rgba(178, 98, 68, ${(0.32 + light * 0.55).toFixed(2)})`;
-              c.fillText(light > 0.62 ? '#' : (light > 0.38 ? ':' : '·'), x, y);
+              glyphCol = (gx * gy > 0.0) ? 2.0 : 3.0; // '/' or '\\'
             }
           } else {
-            if (isEdge) {
-              c.fillStyle = isLip ? 'rgba(155, 215, 255, 0.85)' : 'rgba(75, 165, 235, 0.75)';
-              c.fillText(isLip ? '=' : '|', x, y);
-            } else {
-              c.fillStyle = `rgba(55, 145, 225, ${(0.25 + light * 0.52).toFixed(2)})`;
-              c.fillText(light > 0.62 ? '#' : ':', x, y);
-            }
+            // Density ramp glyph (Row 0: 1..15)
+            glyphRow = 0.0;
+            float variedLuma = clamp(luma * 1.15 + (cellHash - 0.5) * 0.16, 0.08, 0.99);
+            glyphCol = floor(variedLuma * 15.0);
+          }
+
+          // Sample crisp glyph from the 16x2 Atlas Texture
+          // Note: CanvasTexture row 0 is at top (v in 0.5..1.0), row 1 is at bottom (v in 0.0..0.5)
+          float u = (glyphCol + cellFract.x) / 16.0;
+          float v = (glyphRow < 0.5)
+            ? (0.5 + (1.0 - cellFract.y) * 0.5)
+            : ((1.0 - cellFract.y) * 0.5);
+
+          float mask = texture2D(tAscii, vec2(u, v)).r;
+
+          // Boost color saturation & subtle phosphor glow
+          vec3 boostedColor = centerSample.rgb * (1.22 + luma * 0.25);
+          vec3 bg = vec3(0.008, 0.012, 0.02);
+          vec3 finalCol = mix(bg, boostedColor, mask);
+
+          gl_FragColor = vec4(finalCol, 1.0);
+        }
+      `
+    });
+
+    const quadMesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), asciiShaderMat);
+    asciiPostScene.add(quadMesh);
+
+    function updateCameraAndSize() {
+      viewW = window.innerWidth;
+      viewH = window.innerHeight;
+      renderer.setSize(viewW, viewH);
+
+      // Maintain aspect ratio in Orthographic world space, anchored near bottom pot
+      const aspect = viewW / Math.max(1, viewH);
+      const frustumH = 380;
+      const frustumW = frustumH * aspect;
+
+      orthoCamera.left = -frustumW / 2;
+      orthoCamera.right = frustumW / 2;
+      orthoCamera.top = frustumH * 0.78;
+      orthoCamera.bottom = -frustumH * 0.22;
+      orthoCamera.updateProjectionMatrix();
+
+      // Low-res render target sized at 2x character grid for fast supersampled sampling
+      const rtW = Math.max(256, Math.floor(viewW / 2.5));
+      const rtH = Math.max(256, Math.floor(viewH / 2.5));
+      sceneRT.setSize(rtW, rtH);
+
+      asciiShaderMat.uniforms.uResolution.value.set(viewW, viewH);
+    }
+    window.addEventListener('resize', updateCameraAndSize);
+    updateCameraAndSize();
+
+    /* ====================================================================
+       4. SYNC BIOLOGICAL STATE TO THREE.JS INSTANCED MESHES (< 0.3ms/frame)
+       ==================================================================== */
+    const dummyObj = new THREE.Object3D();
+    const tmpColor = new THREE.Color();
+    const upVec = new THREE.Vector3(0, 1, 0);
+    const segVec = new THREE.Vector3();
+    const midVec = new THREE.Vector3();
+
+    let hoveredSegId = null;
+    const hoveredDescSet = new Set();
+
+    function syncBiologyToThreeScene(timeSec) {
+      let cylIdx = 0;
+      let sphIdx = 0;
+      let leafIdx = 0;
+
+      const pushCylinder = (x0, y0, z0, x1, y1, z1, r0, r1, hexOrColor) => {
+        if (cylIdx >= MAX_CYLINDERS) return;
+        segVec.set(x1 - x0, y1 - y0, z1 - z0);
+        const len = segVec.length();
+        if (len < 0.1) return;
+
+        midVec.set((x0 + x1) * 0.5, (y0 + y1) * 0.5, (z0 + z1) * 0.5);
+        dummyObj.position.copy(midVec);
+        dummyObj.quaternion.setFromUnitVectors(upVec, segVec.normalize());
+        const avgR = (r0 + r1) * 0.5;
+        dummyObj.scale.set(avgR, len, avgR);
+        dummyObj.updateMatrix();
+
+        cylInstanced.setMatrixAt(cylIdx, dummyObj.matrix);
+        cylInstanced.setColorAt(cylIdx, hexOrColor);
+        cylIdx++;
+      };
+
+      const pushSphere = (x, y, z, rx, ry, rz, hexOrColor) => {
+        if (sphIdx >= MAX_SPHERES) return;
+        dummyObj.position.set(x, y, z);
+        dummyObj.rotation.set(0, 0, 0);
+        dummyObj.scale.set(rx, ry, rz);
+        dummyObj.updateMatrix();
+
+        sphereInstanced.setMatrixAt(sphIdx, dummyObj.matrix);
+        sphereInstanced.setColorAt(sphIdx, hexOrColor);
+        sphIdx++;
+      };
+
+      // 1. Nebari Surface Roots
+      tmpColor.setRGB(0.68, 0.64, 0.56);
+      for (const r of bonsai.nebariRoots) {
+        pushCylinder(r.x0, r.y0, r.z0, r.x1, r.y1, r.z1, r.r0, r.r1, tmpColor);
+      }
+
+      // 2. White Tamahi Organic Fertilizer Cakes on the Soil Rim
+      tmpColor.setRGB(0.88, 0.85, 0.78);
+      for (const p of bonsai.pellets) {
+        pushSphere(p.x, p.y, p.z, p.rx, p.ry, p.rx, tmpColor);
+      }
+
+      // 3. Trunk, Chopped Trunk Heads & Internode Branches
+      let activeBranchCount = 0;
+      for (const seg of bonsai.segments) {
+        if (seg.pruned) continue;
+
+        const curX1 = seg.x0 + (seg.x1 - seg.x0) * seg.curT;
+        const curY1 = seg.y0 + (seg.y1 - seg.y0) * seg.curT;
+        const curZ1 = seg.z0 + (seg.z1 - seg.z0) * seg.curT;
+
+        const isCutHighlight = hoveredDescSet.has(seg.id);
+
+        if (isCutHighlight) {
+          tmpColor.setRGB(1.0, 0.30, 0.40);
+        } else if (seg.type === 'TRUNK' || seg.type === 'TRUNK_HEAD') {
+          // Aged silver-taupe Japanese Maple bark
+          tmpColor.setRGB(0.74, 0.71, 0.64);
+        } else {
+          activeBranchCount++;
+          // Smooth transition from young reddish-green spring shoot to green-woody branch
+          const w = seg.woodiness;
+          tmpColor.setRGB(
+            0.52 * (1 - w) + 0.62 * w,
+            0.78 * (1 - w) + 0.68 * w,
+            0.40 * (1 - w) + 0.52 * w
+          );
+        }
+
+        pushCylinder(seg.x0, seg.y0, seg.z0, curX1, curY1, curZ1, seg.r0, seg.r1, tmpColor);
+
+        // Render Chop Scars / Cut Paste / Fresh Green Cut Disc at the top of chopped segments (Photo 2 & 4!)
+        if (seg.hasChopScar && seg.curT >= 0.95 && !isCutHighlight) {
+          if (seg.scarStyle === 'DARK_PASTE') {
+            tmpColor.setRGB(0.38, 0.43, 0.48); // Grey cut-paste seal (Photo 1 & 2)
+            pushSphere(curX1, curY1, curZ1 + 2.0, seg.r1 * 0.85, 3.2, seg.r1 * 0.85, tmpColor);
+          } else if (seg.scarStyle === 'FRESH_GREEN_CUT') {
+            // Fresh green-white cambium ring after summer pruning (Photo 4!)
+            tmpColor.setRGB(0.78, 0.95, 0.65);
+            pushSphere(curX1, curY1, curZ1 + 2.0, seg.r1 * 1.25, 2.5, seg.r1 * 1.25, tmpColor);
+          } else {
+            // Callus bevel chop
+            tmpColor.setRGB(0.82, 0.78, 0.66);
+            pushSphere(curX1, curY1, curZ1 + 1.5, seg.r1 * 0.82, 2.8, seg.r1 * 0.82, tmpColor);
           }
         }
-      }
-    }
 
-    function drawNebariRoot(c, root, thickFactor) {
-      c.font = '6px "JetBrains Mono", monospace';
-      const steps = 12;
-      for (let s = 0; s <= steps; s++) {
-        const t = s / steps;
-        const rx = root.dirX * t;
-        const ry = -2 + root.dirY * Math.pow(t, 0.85);
-        const rad = root.thickness * (1 - t * 0.72) * thickFactor;
-        for (let w = -rad; w <= rad; w += 2.4) {
-          const norm = w / Math.max(1, rad);
-          const shade = Math.max(0.2, Math.cos((norm + 0.3) * 1.3));
-          c.fillStyle = 'rgba(2, 5, 8, 0.88)';
-          c.fillRect(rx + w * 0.5 - 1.2, ry - Math.abs(norm) * 1.2 - 1.2, 2.4, 2.4);
-          c.fillStyle = `rgba(182, 174, 156, ${(0.42 + shade * 0.48).toFixed(2)})`;
-          c.fillText(shade > 0.65 ? '#' : ':', rx + w * 0.5, ry - Math.abs(norm) * 1.2);
+        // Clean cut ring indicator at the base of the hovered segment
+        if (hoveredSegId === seg.id) {
+          tmpColor.setRGB(1.0, 0.25, 0.45);
+          pushSphere(seg.x0, seg.y0, seg.z0 + 4.0, Math.max(3.5, seg.r0 * 1.6), 2.2, 3.5, tmpColor);
         }
       }
+
+      // 4. Living Buds (Dormant vs Swelling Crimson-Lime Buds!)
+      let activeBudCount = 0;
+      for (const bud of bonsai.buds) {
+        if (bud.pruned || bud.state === 'SPENT') continue;
+        const pSeg = bonsai.SegmentMap.get(bud.parentSegId);
+        if (!pSeg || pSeg.pruned || pSeg.curT < 0.95) continue;
+
+        if (bud.state === 'SWELLING') {
+          activeBudCount++;
+          // Glowing crimson-lime swelling spring bud (3月 bud break!)
+          const pulse = 1.0 + Math.sin(timeSec * 6.0) * 0.15;
+          const r = (2.2 + bud.swell * 2.4) * pulse;
+          tmpColor.setRGB(0.95, 0.55 + bud.swell * 0.4, 0.35);
+          pushSphere(bud.x, bud.y, bud.z + 2.0, r, r * 1.3, r, tmpColor);
+        } else {
+          // Small dormant axillary/trunk bud
+          tmpColor.setRGB(0.75, 0.42, 0.35);
+          pushSphere(bud.x, bud.y, bud.z + 1.5, 1.5, 1.8, 1.5, tmpColor);
+        }
+      }
+
+      // 5. Palmate 5-Lobed Maple Leaves & Slender Reddish Petioles
+      let activeLeafCount = 0;
+      for (const lf of bonsai.leaves) {
+        if (lf.pruned) continue;
+        const pSeg = bonsai.SegmentMap.get(lf.parentSegId);
+        if (!pSeg || pSeg.pruned) continue;
+
+        activeLeafCount++;
+        const isCutHighlight = hoveredDescSet.has(lf.parentSegId) || (activeTool === 'PINCH' && hoveredSegId === lf.parentSegId);
+
+        // Gentle organic breeze sway
+        const breeze = Math.sin(timeSec * 2.2 + lf.x * 0.05 + lf.y * 0.04) * 0.06;
+        const curPetioleLen = lf.petioleLen * (0.3 + 0.7 * lf.age);
+        const pAngle = lf.angle + breeze;
+
+        const bladeBaseX = lf.x + Math.sin(pAngle) * curPetioleLen;
+        const bladeBaseY = lf.y + Math.cos(pAngle) * curPetioleLen - 2.0 * lf.age;
+        const bladeBaseZ = lf.z + 4.0 + lf.side * 3.0;
+
+        // Slender Reddish-Coral Petiole (Photos 1, 2, 3, 4, 5)
+        tmpColor.setRGB(isCutHighlight ? 1.0 : 0.85, isCutHighlight ? 0.3 : 0.32, 0.32);
+        pushCylinder(lf.x, lf.y, lf.z, bladeBaseX, bladeBaseY, bladeBaseZ, 0.65, 0.55, tmpColor);
+
+        // 5-Lobed Palmate Leaf Blade Instance
+        if (leafIdx < MAX_LEAVES) {
+          const radius = lf.maxRadius * (0.18 + 0.82 * Math.pow(lf.age, 0.82));
+          dummyObj.position.set(bladeBaseX, bladeBaseY, bladeBaseZ);
+          // Orient palmate leaf in the XY projection plane with slight 3D tilt for lighting
+          dummyObj.rotation.set(0.22, lf.tiltZ * 0.35, -pAngle);
+          dummyObj.scale.set(radius, radius, radius);
+          dummyObj.updateMatrix();
+          leafInstanced.setMatrixAt(leafIdx, dummyObj.matrix);
+
+          if (isCutHighlight) {
+            tmpColor.setRGB(1.0, 0.28, 0.38);
+          } else if (seasonTheme === 'AUTUMN') {
+            // Autumn Momiji crimson & fiery orange
+            tmpColor.setHSL(0.03 + lf.hueOffset * 0.002, 0.88, 0.32 + lf.shadeLayer * 0.24);
+          } else if (lf.age < 0.38) {
+            // Newly sprouted March (3月) leaf: warm bronze-red / apricot transition to lime!
+            const bronzeMix = 1.0 - (lf.age / 0.38);
+            const hue = 0.05 * bronzeMix + (0.29 + lf.hueOffset * 0.002) * (1.0 - bronzeMix);
+            tmpColor.setHSL(hue, 0.82, 0.36 + lf.shadeLayer * 0.22);
+          } else {
+            // Mature May/June (6月) lush emerald green canopy with depth layering (Photos 3 & 5)
+            const hue = (bonsai.species === 'BONSAI_PINE' ? 0.38 : 0.31) + lf.hueOffset * 0.002;
+            const light = 0.24 + lf.shadeLayer * 0.30;
+            tmpColor.setHSL(hue, 0.78, light);
+          }
+
+          leafInstanced.setColorAt(leafIdx, tmpColor);
+          leafIdx++;
+        }
+      }
+
+      // 6. Falling Pruned Clippings Animation
+      for (let i = bonsai.fallingClips.length - 1; i >= 0; i--) {
+        const clip = bonsai.fallingClips[i];
+        clip.x += clip.vx;
+        clip.y += clip.vy;
+        clip.vy -= 0.18;
+        clip.alpha -= 0.035;
+        if (clip.alpha <= 0) {
+          bonsai.fallingClips.splice(i, 1);
+          continue;
+        }
+        if (leafIdx < MAX_LEAVES) {
+          dummyObj.position.set(clip.x, clip.y, clip.z + 10);
+          dummyObj.rotation.set(0.3, 0.2, clip.alpha * 3.0);
+          dummyObj.scale.set(16, 16, 16);
+          dummyObj.updateMatrix();
+          leafInstanced.setMatrixAt(leafIdx, dummyObj.matrix);
+          tmpColor.setRGB(0.95 * clip.alpha, 0.35 * clip.alpha, 0.40 * clip.alpha);
+          leafInstanced.setColorAt(leafIdx, tmpColor);
+          leafIdx++;
+        }
+      }
+
+      cylInstanced.count = cylIdx;
+      cylInstanced.instanceMatrix.needsUpdate = true;
+      if (cylInstanced.instanceColor) cylInstanced.instanceColor.needsUpdate = true;
+
+      sphereInstanced.count = sphIdx;
+      sphereInstanced.instanceMatrix.needsUpdate = true;
+      if (sphereInstanced.instanceColor) sphereInstanced.instanceColor.needsUpdate = true;
+
+      leafInstanced.count = leafIdx;
+      leafInstanced.instanceMatrix.needsUpdate = true;
+      if (leafInstanced.instanceColor) leafInstanced.instanceColor.needsUpdate = true;
+
+      // Update Minimal Top Telemetry Bar
+      document.getElementById('hudBuds').innerText = `${activeBudCount}`;
+      document.getElementById('hudLeaves').innerText = `${activeLeafCount}`;
+      document.getElementById('hudBranches').innerText = `${activeBranchCount}`;
+      const baseTrunk = bonsai.segments[0];
+      if (baseTrunk) {
+        document.getElementById('trunkCaliberLabel').innerText = `${(baseTrunk.r0 * 1.45).toFixed(1)} mm`;
+      }
+      const yearNum = Math.floor(bonsai.simDays / 90) + 1;
+      const monthNames = ['3月 (MAR)', '4月 (ABR)', '5月 (MAY)', '6月 (JUN)', '7月 (JUL)', '8月 (AGO)'];
+      const mIdx = Math.floor((bonsai.simDays % 90) / 15) % monthNames.length;
+      document.getElementById('simAgeLabel').innerText = `AÑO ${yearNum} // ${monthNames[mIdx]}`;
     }
 
     /* ====================================================================
-       6. MONSTERA / IRIS RENDERER (SECONDARY MODE)
+       5. INTERACTIVE MOUSE HIT-TESTING & UI CONTROLS
        ==================================================================== */
-    function renderMonsteraSpecimen(c, potRimX, potRimY, scale) {
-      c.save();
-      c.translate(potRimX, potRimY);
-      c.scale(scale, scale);
-
-      const computedCurves = {};
-      const activePetioles = [];
-      for (const p of currentPlant.petioles) {
-        if (growthProgress >= p.birthAge) {
-          const span = Math.max(0.05, p.fullMaturityAge - p.birthAge);
-          const localAge = Math.max(0.02, Math.min(1.0, (growthProgress - p.birthAge) / span));
-          const startX = p.nodeX;
-          const startY = p.nodeY;
-          const currentEndAngle = -Math.PI / 2 + p.fanAngle;
-          const petioleLen = p.maxPetioleLength * localAge;
-          const endX = startX + Math.cos(currentEndAngle) * petioleLen;
-          const endY = startY + Math.sin(currentEndAngle) * petioleLen;
-          const ctrlX = startX + (endX - startX) * 0.38;
-          const ctrlY = startY + (endY - startY) * 0.68 - 14 * localAge;
-          const geom = { startX, startY, ctrlX, ctrlY, endX, endY, currentEndAngle, petioleLen };
-          computedCurves[p.index] = geom;
-          activePetioles.push({ petiole: p, localAge, geom });
-        }
-      }
-
-      for (const { petiole, localAge, geom } of activePetioles) {
-        const steps = Math.max(10, Math.floor(geom.petioleLen / 3));
-        c.font = '6px "JetBrains Mono", monospace';
-        for (let s = 0; s <= steps; s++) {
-          const t = s / steps;
-          const pt = evalQuadBezier(geom.startX, geom.startY, geom.ctrlX, geom.ctrlY, geom.endX, geom.endY, t);
-          c.fillStyle = 'rgba(75, 242, 190, 0.85)';
-          c.fillText('|', pt.x, pt.y);
-        }
-        drawMonsteraBladeSimple(c, geom.endX, geom.endY, petiole, localAge, geom);
-      }
-      c.restore();
+    function distToSegment2D(px, py, x0, y0, x1, y1) {
+      const dx = x1 - x0;
+      const dy = y1 - y0;
+      const lenSq = dx * dx + dy * dy;
+      if (lenSq < 0.001) return Math.hypot(px - x0, py - y0);
+      const t = Math.max(0, Math.min(1, ((px - x0) * dx + (py - y0) * dy) / lenSq));
+      return Math.hypot(px - (x0 + t * dx), py - (y0 + t * dy));
     }
 
-    function drawMonsteraBladeSimple(c, x, y, p, localAge, geom) {
-      c.save();
-      c.translate(x, y);
-      c.rotate(geom.currentEndAngle + Math.PI / 2);
-      const bladeLen = p.maxBladeLength * localAge;
-      const halfW = p.maxBladeWidth * 0.5 * localAge;
-      const cols = Math.max(10, Math.floor(bladeLen / 3.2));
-      c.font = '6px "JetBrains Mono", monospace';
-      for (let i = 0; i <= cols; i++) {
-        const u = i / cols;
-        const env = Math.sin(u * Math.PI);
-        const rows = Math.round((halfW * env) / 3.0);
-        for (let j = -rows; j <= rows; j++) {
-          c.fillStyle = `hsla(${195 + u * 35}, 90%, 58%, 0.88)`;
-          c.fillText(j === 0 ? '|' : '0', j * 3.0, -u * bladeLen);
-        }
-      }
-      c.restore();
-    }
+    renderer.domElement.addEventListener('mousemove', (e) => {
+      const rect = renderer.domElement.getBoundingClientRect();
+      const ndcX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      const ndcY = -((e.clientY - rect.top) / rect.height) * 2 + 1;
 
-    /* ====================================================================
-       7. INTERACTIVE PRUNING, PINCHING & CONTROLS
-       ==================================================================== */
-    const toolPrune = document.getElementById('toolPrune');
-    const toolPinch = document.getElementById('toolPinch');
-    const btnAdvanceSeason = document.getElementById('btnAdvanceSeason');
-    const btnUndo = document.getElementById('btnUndo');
-    const btnSoundToggle = document.getElementById('btnSoundToggle');
-    const bonsaiToolsPanel = document.getElementById('bonsaiToolsPanel');
+      const worldX = orthoCamera.left + (ndcX + 1) * 0.5 * (orthoCamera.right - orthoCamera.left);
+      const worldY = orthoCamera.bottom + (ndcY + 1) * 0.5 * (orthoCamera.top - orthoCamera.bottom);
 
-    function distToQuadBezier(px, py, p0x, p0y, cpx, cpy, p1x, p1y, samples = 12) {
-      let minDistSq = Infinity;
-      for (let i = 0; i <= samples; i++) {
-        const t = i / samples;
-        const inv = 1 - t;
-        const x = inv * inv * p0x + 2 * inv * t * cpx + t * t * p1x;
-        const y = inv * inv * p0y + 2 * inv * t * cpy + t * t * p1y;
-        const dSq = (px - x) * (px - x) + (py - y) * (py - y);
-        if (dSq < minDistSq) minDistSq = dSq;
-      }
-      return Math.sqrt(minDistSq);
-    }
+      let bestSegId = null;
+      let minDist = 14.0;
 
-    function setActiveBonsaiTool(tool) {
-      activeBonsaiTool = tool;
-      toolPrune.classList.toggle('active', tool === 'PRUNE');
-      toolPinch.classList.toggle('active', tool === 'PINCH');
-      canvas.classList.remove('canvas-prune', 'canvas-pinch');
-      if (currentSpecies.startsWith('BONSAI')) {
-        canvas.classList.add(tool === 'PRUNE' ? 'canvas-prune' : 'canvas-pinch');
-      }
-    }
-
-    toolPrune.addEventListener('click', () => setActiveBonsaiTool('PRUNE'));
-    toolPinch.addEventListener('click', () => setActiveBonsaiTool('PINCH'));
-
-    btnAdvanceSeason.addEventListener('click', () => {
-      if (currentSpecies.startsWith('BONSAI')) {
-        bonsaiAudio.playChime();
-        currentBonsaiTree.growSeason(environment.metabolicFactor);
-        // Set slider to early spring (3月/4月) of the new season and start growing smoothly!
-        growthProgress = 0.22;
-        ageSlider.value = growthProgress;
-        toggleTimeLapse(true);
-      }
-    });
-
-    btnUndo.addEventListener('click', () => {
-      if (currentSpecies.startsWith('BONSAI')) {
-        if (currentBonsaiTree.undo()) bonsaiAudio.playChime();
-      }
-    });
-
-    btnSoundToggle.addEventListener('click', () => {
-      bonsaiAudio.enabled = !bonsaiAudio.enabled;
-      btnSoundToggle.innerText = bonsaiAudio.enabled ? '🔊' : '🔇';
-    });
-
-    canvas.addEventListener('mousemove', (e) => {
-      if (!currentSpecies.startsWith('BONSAI')) {
-        hoveredNodeId = null;
-        hoveredDescendantSet.clear();
-        return;
-      }
-
-      const rect = canvas.getBoundingClientRect();
-      const mouseX = e.clientX - rect.left;
-      const mouseY = e.clientY - rect.top;
-
-      const potRimX = viewW / 2;
-      const potRimY = viewH * 0.78;
-      const scale = Math.min(1.22, Math.max(0.68, Math.min(viewW / 640, viewH / 680)));
-
-      const localX = (mouseX - potRimX) / scale;
-      const localY = (mouseY - potRimY) / scale;
-
-      let closestId = null;
-      let minDist = 18.0;
-
-      for (const [id, g] of lastLiveGeom) {
-        const node = g.node;
-        if (node.pruned || node.type === 'TRUNK' || node.type === 'TRUNK_HEAD') continue;
-        const d = distToQuadBezier(localX, localY, g.p0x, g.p0y, g.cpx, g.cpy, g.p1x, g.p1y);
+      for (const seg of bonsai.segments) {
+        if (seg.pruned || seg.type === 'TRUNK' || seg.type === 'TRUNK_HEAD') continue;
+        const curX1 = seg.x0 + (seg.x1 - seg.x0) * seg.curT;
+        const curY1 = seg.y0 + (seg.y1 - seg.y0) * seg.curT;
+        const d = distToSegment2D(worldX, worldY, seg.x0, seg.y0, curX1, curY1);
         if (d < minDist) {
           minDist = d;
-          closestId = id;
+          bestSegId = seg.id;
         }
       }
 
-      hoveredNodeId = closestId;
-      hoveredDescendantSet.clear();
-      if (hoveredNodeId && activeBonsaiTool === 'PRUNE') {
+      hoveredSegId = bestSegId;
+      hoveredDescSet.clear();
+      if (hoveredSegId && activeTool === 'PRUNE') {
         const list = [];
-        currentBonsaiTree.collectDescendantIds(hoveredNodeId, list);
-        for (const id of list) hoveredDescendantSet.add(id);
+        bonsai.collectDescendants(hoveredSegId, list);
+        for (const id of list) hoveredDescSet.add(id);
       }
     });
 
-    canvas.addEventListener('click', () => {
+    renderer.domElement.addEventListener('click', () => {
       bonsaiAudio.init();
-      if (!currentSpecies.startsWith('BONSAI') || !hoveredNodeId) return;
+      if (!hoveredSegId) return;
 
-      if (activeBonsaiTool === 'PRUNE') {
-        if (currentBonsaiTree.pruneNode(hoveredNodeId, lastLiveGeom)) {
+      if (activeTool === 'PRUNE') {
+        if (bonsai.pruneSegment(hoveredSegId)) {
           bonsaiAudio.playSnip();
-          hoveredNodeId = null;
-          hoveredDescendantSet.clear();
+          hoveredSegId = null;
+          hoveredDescSet.clear();
         }
-      } else if (activeBonsaiTool === 'PINCH') {
-        if (currentBonsaiTree.pinchNode(hoveredNodeId)) {
-          bonsaiAudio.playSnip();
-          hoveredNodeId = null;
-        }
-      }
-    });
-
-    canvas.addEventListener('mouseleave', () => {
-      hoveredNodeId = null;
-      hoveredDescendantSet.clear();
-    });
-
-    speciesSelect.addEventListener('change', (e) => {
-      currentSpecies = e.target.value;
-      const isBonsai = currentSpecies.startsWith('BONSAI');
-      const idNum = (currentSeed % 900 + 100);
-      if (isBonsai) {
-        const spec = BONSAI_SPECIES_MODELS[currentSpecies] || BONSAI_SPECIES_MODELS['BONSAI_MAPLE'];
-        specimenHeader.innerText = `${spec.botanicalName} #${idNum}`;
-        currentBonsaiTree = new FractalBonsaiTree(currentSeed, currentSpecies);
       } else {
-        specimenHeader.innerText = `IRIS_GECE_MAVISI #${idNum}`;
+        if (bonsai.pinchOrWakeBud(hoveredSegId)) {
+          bonsaiAudio.playBudPop();
+          hoveredSegId = null;
+        }
       }
-      if (bonsaiToolsPanel) {
-        bonsaiToolsPanel.style.display = isBonsai ? 'flex' : 'none';
-      }
-      setActiveBonsaiTool(activeBonsaiTool);
     });
 
-    btnPlantNow.addEventListener('click', () => {
-      if (isTimeLapse) toggleTimeLapse(false);
-      growthProgress = 0.08; // Early March bud break (3月)
-      ageSlider.value = growthProgress;
-      toggleTimeLapse(true);
-    });
+    // Tool Buttons
+    const toolPrune = document.getElementById('toolPrune');
+    const toolPinch = document.getElementById('toolPinch');
 
-    btnMutate.addEventListener('click', () => {
-      currentSeed = Math.floor(Math.random() * 0xFFFFFF);
-      seedDisplay.innerText = '0x' + currentSeed.toString(16).toUpperCase().padStart(6, '0');
-      const idNum = (currentSeed % 900 + 100);
-      if (currentSpecies.startsWith('BONSAI')) {
-        const spec = BONSAI_SPECIES_MODELS[currentSpecies] || BONSAI_SPECIES_MODELS['BONSAI_MAPLE'];
-        specimenHeader.innerText = `${spec.botanicalName} #${idNum}`;
-      }
-      currentBonsaiTree = new FractalBonsaiTree(currentSeed, currentSpecies);
-      currentPlant = new MonsteraClump(currentSeed);
-      hoveredNodeId = null;
-      hoveredDescendantSet.clear();
-    });
-
-    function toggleTimeLapse(state) {
-      isTimeLapse = (typeof state === 'boolean') ? state : !isTimeLapse;
-      if (isTimeLapse && growthProgress >= 0.98) {
-        growthProgress = 0.08;
-      }
-      playIcon.innerText = isTimeLapse ? '⏸' : '▶';
-      playText.innerText = isTimeLapse ? 'PAUSAR' : 'CRECER';
+    function setTool(tool) {
+      activeTool = tool;
+      toolPrune.classList.toggle('active', tool === 'PRUNE');
+      toolPinch.classList.toggle('active', tool === 'PINCH');
+      renderer.domElement.className = tool === 'PRUNE' ? 'canvas-prune' : 'canvas-pinch';
     }
-    btnTimeLapse.addEventListener('click', () => toggleTimeLapse());
+    setTool('PRUNE');
+    toolPrune.addEventListener('click', () => setTool('PRUNE'));
+    toolPinch.addEventListener('click', () => setTool('PINCH'));
 
-    function animate() {
-      globalTick++;
-      updateSeasonAndClock();
-      renderBioCanvas();
+    // Speed Controls
+    const btnSpeedPause = document.getElementById('btnSpeedPause');
+    const btnSpeed1x = document.getElementById('btnSpeed1x');
+    const btnSpeed4x = document.getElementById('btnSpeed4x');
+
+    function setSimSpeed(spd) {
+      simSpeed = spd;
+      btnSpeedPause.classList.toggle('active', spd === 0);
+      btnSpeed1x.classList.toggle('active', spd === 1.0);
+      btnSpeed4x.classList.toggle('active', spd === 4.0);
+      document.getElementById('liveDot').className = spd === 0
+        ? 'inline-block w-2 h-2 rounded-full bg-amber-400'
+        : 'inline-block w-2 h-2 rounded-full bg-[#37ecc4] animate-pulse';
+    }
+    btnSpeedPause.addEventListener('click', () => setSimSpeed(0));
+    btnSpeed1x.addEventListener('click', () => setSimSpeed(1.0));
+    btnSpeed4x.addEventListener('click', () => setSimSpeed(4.0));
+
+    document.getElementById('btnBurstSpring').addEventListener('click', () => {
+      bonsaiAudio.playBudPop();
+      bonsai.burstSpringFlush();
+    });
+
+    document.getElementById('btnUndo').addEventListener('click', () => {
+      if (bonsai.undo()) bonsaiAudio.playBudPop();
+    });
+
+    document.getElementById('btnSoundToggle').addEventListener('click', (e) => {
+      bonsaiAudio.enabled = !bonsaiAudio.enabled;
+      e.target.innerText = bonsaiAudio.enabled ? '🔊' : '🔇';
+    });
+
+    document.getElementById('btnSeasonTheme').addEventListener('click', () => {
+      seasonTheme = (seasonTheme === 'SPRING') ? 'AUTUMN' : 'SPRING';
+      document.getElementById('seasonThemeText').innerText = seasonTheme === 'AUTUMN'
+        ? 'OTOÑO (MOMIJI ROJO)'
+        : 'PRIMAVERA / VERANO';
+    });
+
+    document.getElementById('btnBareStump').addEventListener('click', () => {
+      bonsaiAudio.playBudPop();
+      bonsai = new LivingBonsaiOrganism(currentSeed, currentSpecies);
+      setSimSpeed(1.0);
+    });
+
+    document.getElementById('btnMutate').addEventListener('click', () => {
+      currentSeed = Math.floor(Math.random() * 0xFFFFFF);
+      document.getElementById('seedDisplay').innerText = '0x' + currentSeed.toString(16).toUpperCase().padStart(6, '0');
+      const idNum = (currentSeed % 900 + 100);
+      document.getElementById('specimenHeader').innerText = `${currentSpecies.replace('BONSAI_', 'ACER_')} #${idNum}`;
+      bonsai = new LivingBonsaiOrganism(currentSeed, currentSpecies);
+      for (let i = 0; i < 65; i++) bonsai.stepBiology(0.05);
+    });
+
+    document.getElementById('speciesSelect').addEventListener('change', (e) => {
+      currentSpecies = e.target.value;
+      bonsai = new LivingBonsaiOrganism(currentSeed, currentSpecies);
+      for (let i = 0; i < 65; i++) bonsai.stepBiology(0.05);
+    });
+
+    /* ====================================================================
+       6. MAIN GPU RENDER LOOP (60-120 FPS)
+       ==================================================================== */
+    let lastTime = performance.now();
+
+    function animate(now) {
+      const dt = Math.min(0.05, (now - lastTime) / 1000);
+      lastTime = now;
+
+      if (simSpeed > 0) {
+        bonsai.stepBiology(dt * simSpeed);
+      }
+
+      syncBiologyToThreeScene(now * 0.001);
+
+      // Pass 1: Render 3D Botanical Scene into offscreen RenderTarget
+      renderer.setRenderTarget(sceneRT);
+      renderer.render(bioScene, orthoCamera);
+
+      // Pass 2: Project 3D RenderTarget through Fullscreen GPU ASCII Shader
+      renderer.setRenderTarget(null);
+      renderer.render(asciiPostScene, asciiPostCam);
+
       requestAnimationFrame(animate);
     }
 
-    function initApp() {
-      resizeCanvas();
-      seedDisplay.innerText = '0x' + currentSeed.toString(16).toUpperCase();
-      setActiveBonsaiTool('PRUNE');
-      animate();
-    }
-
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', initApp);
-    } else {
-      initApp();
-    }
+    requestAnimationFrame(animate);
   </script>
 </body>
 </html>

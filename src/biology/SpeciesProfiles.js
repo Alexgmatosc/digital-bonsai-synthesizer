@@ -23,21 +23,21 @@ export const SPECIES_PROFILES = {
     leavesPerNode: 2,
     budsPerNode: 2,
     branchAngleMin: (32 * Math.PI) / 180,
-    branchAngleMax: (46 * Math.PI) / 180,
+    branchAngleMax: (45 * Math.PI) / 180, // Authentic 32°-45° Y-dichotomy for Acer palmatum
     leafAngleBase: 0.68,
     leafAngleSpread: 0.26,
     stemDeflectionRad: 0.04,
     internodeContraction: 0.84,
     leafScaleContraction: 0.85,
     baseInternodeLen: 24.0,
-    internodeLenVar: 9.0,
+    internodeLenVar: 8.5,
     pipeAlpha: 2.15,
     leafPipeRadius: 0.72,
-    cambiumRate: 0.24,
-    lignificationRate: 0.28,
+    cambiumRate: 0.28,
+    lignificationRate: 0.32,
     abscissionWoodiness: 0.62,
     apicalDominanceDecay: 0.68,
-    maxTrunkRadius: 38.0
+    maxTrunkRadius: 42.0
   },
 
   BONSAI_ULMUS: {

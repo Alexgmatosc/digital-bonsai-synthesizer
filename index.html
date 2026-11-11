@@ -86,35 +86,42 @@
 
   <!-- MINIMAL TOP HEADER BAR: Zero overlap with central Bonsai -->
   <header class="relative z-20 flex flex-wrap justify-between items-center text-xs text-[#6194b8] tracking-wider gap-2 pointer-events-none">
-    <div class="cyber-panel px-3 py-1.5 rounded border-l-2 border-l-[#37ecc4] flex flex-wrap items-center gap-3 pointer-events-auto">
+    <div class="cyber-panel px-3 py-1.5 rounded border-l-2 border-l-[#37ecc4] flex flex-wrap items-center gap-2.5 pointer-events-auto">
       <div class="flex items-center gap-2">
         <span id="liveDot" class="inline-block w-2 h-2 rounded-full bg-[#37ecc4] animate-pulse"></span>
-        <span id="specimenHeader" class="text-xs md:text-sm font-bold text-[#e1f5fe]">ACER_PALMATUM #842</span>
+        <span id="specimenHeader" class="text-xs md:text-sm font-bold text-[#e1f5fe]">🍁 ACER_PALMATUM #842</span>
         <span id="modeBadge" class="px-1.5 py-0.5 text-[10px] rounded bg-[#0c2636] border border-[#225573] text-[#37ecc4]">🌱 BROTE JOVEN</span>
       </div>
-      <div class="hidden sm:flex items-center gap-3 text-[11px] text-[#71a5c7] font-mono border-l border-[#163247] pl-3">
+
+      <!-- 4 SEASONS HUD & CALENDAR TELEMETRY -->
+      <div class="flex items-center gap-2 text-xs font-mono border-l border-[#163247] pl-2.5">
+        <span id="hudYearBadge" class="px-2 py-0.5 rounded font-bold bg-[#0a2133] border border-[#255f85] text-[#e1f5fe]">AÑO 1</span>
+        <span id="hudSeasonBadge" class="px-2 py-0.5 rounded font-bold bg-[#281523] border border-[#f472b6] text-[#f472b6] shadow-[0_0_8px_rgba(244,114,182,0.3)] transition-all duration-300">🌸 PRIMAVERA</span>
+        <span id="hudMonthBadge" class="px-2 py-0.5 rounded font-bold bg-[#07131e] border border-[#163247] text-[#9cdbfa]">3月 MAR</span>
+      </div>
+
+      <div class="hidden lg:flex items-center gap-2.5 text-[11px] text-[#71a5c7] font-mono border-l border-[#163247] pl-2.5">
+        <span>CALIBRE: <b id="trunkCaliberLabel" class="text-[#37ecc4]">2.1 mm</b></span>
         <span>SEMILLA: <b id="seedDisplay" class="text-[#37ecc4]">0x84A3F2</b></span>
-        <span>EDAD: <b id="simAgeLabel" class="text-[#89aaff]">AÑO 0 // 3月 (MAR)</b></span>
-        <span>CALIBRE BASE: <b id="trunkCaliberLabel" class="text-[#37ecc4]">2.1 mm</b></span>
       </div>
     </div>
 
     <div class="cyber-panel px-3 py-1.5 rounded font-mono text-[11px] flex flex-wrap items-center gap-3 pointer-events-auto">
       <div class="flex items-center gap-3">
         <span class="text-[#7ea4cb]" title="Orden máximo de ramificación fractal alcanzado">ORDEN: <b id="hudOrder" class="text-[#f59e0b]">G0</b></span>
-        <span class="text-[#7ea4cb]" title="Yemas de hoja axilares y meristemos activos">YEMAS: <b id="hudBuds" class="text-[#a3e635]">0</b></span>
+        <span class="text-[#7ea4cb]" title="Yemas axilares y meristemos activos">YEMAS: <b id="hudBuds" class="text-[#a3e635]">0</b></span>
         <span class="text-[#7ea4cb]">HOJAS: <b id="hudLeaves" class="text-[#37ecc4]">0</b></span>
         <span class="text-[#8ea9df]">SEGMENTOS: <b id="hudBranches" class="text-[#89aaff]">0</b></span>
       </div>
-      <div class="hidden md:flex items-center gap-2 border-l border-[#163247] pl-3">
-        <button id="btnSeasonTheme" class="px-2 py-0.5 bg-[#0a1d2e] hover:bg-[#122e47] border border-[#1f4361] text-[#8ab8d9] rounded text-[10px] transition">
-          ESTACIÓN: <b id="seasonThemeText" class="text-[#37ecc4]">PRIMAVERA / VERANO</b>
+      <div class="flex items-center gap-2 border-l border-[#163247] pl-2.5">
+        <button id="btnHeaderAdvanceSeason" title="Avanzar una estación completa (Primavera 🌸 -> Verano ☀️ -> Otoño 🍁 -> Invierno ❄️)" class="px-2 py-0.5 bg-[#143a32] hover:bg-[#1c5246] border border-[#37ecc4] text-[#37ecc4] rounded text-[10px] font-bold transition active:scale-95 flex items-center gap-1">
+          <span>⏭</span> <span>+1 ESTACIÓN</span>
         </button>
       </div>
     </div>
   </header>
 
-  <!-- BOTTOM CONTROL DOCK: Pruning, Time Speed (0x-30x), Camera Zoom/Auto-Fit & Growth Origin -->
+  <!-- BOTTOM CONTROL DOCK: Pruning, Time Speed (0x-25x), Camera Zoom/Auto-Fit & Growth Origin -->
   <footer class="relative z-20 cyber-panel px-3 py-2 rounded-lg max-w-[1440px] mx-auto w-full flex flex-col xl:flex-row items-center justify-between gap-2 pointer-events-auto">
 
     <!-- 1. Interactive Pruning, Leaf-Bud Pinching & Camera Pan Tools -->
@@ -140,31 +147,31 @@
       </button>
     </div>
 
-    <!-- 2. Real-Time Biological Time Speed Controls (0x to 30x + Season Step) -->
+    <!-- 2. Real-Time Biological Time Speed Controls (Calibrated 1x Zen to 25x Turbo + Season Step) -->
     <div class="flex flex-wrap items-center justify-center gap-1 font-mono text-[11px] border-t xl:border-t-0 xl:border-l border-[#163247] pt-1.5 xl:pt-0 xl:pl-2.5">
       <span class="text-[#71a5c7] text-[10px] mr-0.5">TIEMPO BIO:</span>
-      <button id="btnSpeedPause" class="speed-btn px-2 py-1 rounded bg-[#081724] border border-[#1a3850] text-[#8ab8d9] hover:bg-[#10263a]">
+      <button id="btnSpeedPause" title="Detener tiempo biológico" class="speed-btn px-2 py-1 rounded bg-[#081724] border border-[#1a3850] text-[#8ab8d9] hover:bg-[#10263a]">
         ⏸ PAUSA
       </button>
-      <button id="btnSpeed1x" class="speed-btn active px-2 py-1 rounded bg-[#081724] border border-[#1a3850] text-[#8ab8d9] hover:bg-[#10263a]">
-        ▶ 1x
+      <button id="btnSpeed1x" title="Velocidad 1x ZEN: observación biológica tranquila y contemplativa en tiempo real" class="speed-btn active px-2 py-1 rounded bg-[#081724] border border-[#1a3850] text-[#8ab8d9] hover:bg-[#10263a]">
+        ▶ 1x ZEN
       </button>
-      <button id="btnSpeed5x" class="speed-btn px-2 py-1 rounded bg-[#081724] border border-[#1a3850] text-[#8ab8d9] hover:bg-[#10263a]">
-        ⏩ 5x
+      <button id="btnSpeed4x" title="Velocidad 4x: desarrollo vegetativo moderado" class="speed-btn px-2 py-1 rounded bg-[#081724] border border-[#1a3850] text-[#8ab8d9] hover:bg-[#10263a]">
+        ⏩ 4x
       </button>
-      <button id="btnSpeed15x" class="speed-btn px-2 py-1 rounded bg-[#081724] border border-[#1a3850] text-[#8ab8d9] hover:bg-[#10263a]">
-        🚀 15x
+      <button id="btnSpeed12x" title="Velocidad 12x: progresión de ciclo estacional" class="speed-btn px-2 py-1 rounded bg-[#081724] border border-[#1a3850] text-[#8ab8d9] hover:bg-[#10263a]">
+        🚀 12x
       </button>
-      <button id="btnSpeed30x" class="speed-btn px-2 py-1 rounded bg-[#081724] border border-[#1a3850] text-[#8ab8d9] hover:bg-[#10263a]">
-        ⚡ 30x
+      <button id="btnSpeed25x" title="Velocidad 25x: crecimiento biológico multi-año acelerado" class="speed-btn px-2 py-1 rounded bg-[#081724] border border-[#1a3850] text-[#8ab8d9] hover:bg-[#10263a]">
+        ⚡ 25x
       </button>
 
       <div class="flex items-center gap-1.5 bg-[#071420] border border-[#173349] rounded px-2 py-0.5">
-        <input id="speedSlider" type="range" min="0" max="30" step="0.5" value="1" class="cyber-slider w-16 md:w-20" title="Velocidad biológica continua (0x a 30x)">
-        <span id="speedValueLabel" class="text-[#37ecc4] font-bold min-w-[34px] text-right">1.0x</span>
+        <input id="speedSlider" type="range" min="0" max="25" step="0.5" value="1" class="cyber-slider w-16 md:w-20" title="Control deslizante de velocidad biológica continua (0x a 25x)">
+        <span id="speedValueLabel" class="text-[#37ecc4] font-bold min-w-[50px] text-right">1.0x ZEN</span>
       </div>
 
-      <button id="btnAdvanceSeason" title="Avanzar una estación completa (brotación axilar, elongación fractal y engrosamiento cambial)" class="px-2 py-1 rounded bg-[#143a32] border border-[#37ecc4] text-[#37ecc4] hover:bg-[#1b4e43] font-bold active:scale-95 transition">
+      <button id="btnAdvanceSeason" title="Avanzar una estación completa (Primavera 🌸 -> Verano ☀️ -> Otoño 🍁 -> Invierno ❄️)" class="px-2 py-1 rounded bg-[#143a32] border border-[#37ecc4] text-[#37ecc4] hover:bg-[#1b4e43] font-bold active:scale-95 transition">
         ⏭ +1 ESTACIÓN
       </button>
     </div>
@@ -189,22 +196,20 @@
       </button>
     </div>
 
-    <!-- 4. Growth Origin (Seedling Shoot vs Pre-Bonsai) & Species Controls -->
+    <!-- 4. Growth Origin (Seedling Shoot vs Pre-Bonsai) & Acer palmatum Focus -->
     <div class="flex flex-wrap items-center justify-center xl:justify-end gap-1.5 font-mono text-[11px] border-t xl:border-t-0 xl:border-l border-[#163247] pt-1.5 xl:pt-0 xl:pl-2.5">
-      <button id="btnStartSeedling" title="Empezar desde un único brote joven tierno (Año 0): observa cómo de las yemas de las hojas nacen ramas y el tallo se convierte en tronco" class="mode-btn active px-2 py-1 rounded bg-[#0b2230] hover:bg-[#13354a] border border-[#235370] text-[#a3e635] font-bold transition active:scale-95">
-        🌱 BROTE JOVEN (AÑO 0)
+      <button id="btnStartSeedling" title="Empezar desde un único brote joven tierno (Año 1): observa cómo de las yemas de las hojas nacen ramas y el tallo se convierte en tronco" class="mode-btn active px-2 py-1 rounded bg-[#0b2230] hover:bg-[#13354a] border border-[#235370] text-[#a3e635] font-bold transition active:scale-95">
+        🌱 BROTE JOVEN (AÑO 1)
       </button>
 
       <button id="btnStartTrained" title="Empezar desde un tronco pre-bonsái ya engrosado y podado en Marzo (3月)" class="mode-btn px-2 py-1 rounded bg-[#0b2230] hover:bg-[#13354a] border border-[#235370] text-[#9bd6ff] transition active:scale-95">
         🪵 PRE-BONSÁI (3月)
       </button>
 
-      <div class="flex items-center bg-[#081724] border border-[#1a3850] rounded px-1.5 py-1">
-        <select id="speciesSelect" class="bg-transparent text-[#37ecc4] font-bold outline-none cursor-pointer text-[11px]">
-          <option value="BONSAI_MAPLE" selected class="bg-[#06121c]">🍁 Arce Japonés</option>
-          <option value="BONSAI_ULMUS" class="bg-[#06121c]">🌳 Olmo Chino</option>
-          <option value="BONSAI_PINE" class="bg-[#06121c]">🌲 Pino Negro</option>
-        </select>
+      <!-- Proud single species focus: Acer palmatum (Yamamomiji) -->
+      <div id="speciesBadge" class="flex items-center gap-1.5 bg-[#0b221d] border border-[#1e5848] rounded px-2.5 py-1 text-[11px] text-[#37ecc4] font-bold shadow-sm" title="Especie activa única: Acer palmatum (Arce Japonés // Yamamomiji)">
+        <span class="text-sm">🍁</span>
+        <span>Acer palmatum <span class="text-[#7ea4cb] font-normal hidden sm:inline">(Yamamomiji)</span></span>
       </div>
 
       <button id="btnMutate" title="Generar un nuevo ejemplar con otra semilla genética" class="px-2 py-1 bg-[#102d3e] hover:bg-[#18445f] border border-[#30709f] text-[#50e3c2] rounded transition active:scale-95 font-bold flex items-center gap-1">
@@ -242,21 +247,21 @@ const SPECIES_PROFILES = {
     leavesPerNode: 2,
     budsPerNode: 2,
     branchAngleMin: (32 * Math.PI) / 180,
-    branchAngleMax: (46 * Math.PI) / 180,
+    branchAngleMax: (45 * Math.PI) / 180, // Authentic 32°-45° Y-dichotomy for Acer palmatum
     leafAngleBase: 0.68,
     leafAngleSpread: 0.26,
     stemDeflectionRad: 0.04,
     internodeContraction: 0.84,
     leafScaleContraction: 0.85,
     baseInternodeLen: 24.0,
-    internodeLenVar: 9.0,
+    internodeLenVar: 8.5,
     pipeAlpha: 2.15,
     leafPipeRadius: 0.72,
-    cambiumRate: 0.24,
-    lignificationRate: 0.28,
+    cambiumRate: 0.28,
+    lignificationRate: 0.32,
     abscissionWoodiness: 0.62,
     apicalDominanceDecay: 0.68,
-    maxTrunkRadius: 38.0
+    maxTrunkRadius: 42.0
   },
 
   BONSAI_ULMUS: {
@@ -315,12 +320,19 @@ const SPECIES_PROFILES = {
 
 /* --- MODULE: src/biology/LivingBonsaiOrganism.js --- */
 /**
- * Causal & Fractal Biological Bonsai Engine
+ * Causal & Fractal Biological Bonsai Engine with 4-Season Annual Cycles
+ * Specifically tuned for Acer palmatum (Arce Japonés / Yamamomiji).
  *
- * Models the complete ontogenetic cycle:
- *   Axillary Leaf-Bud (AXILLARY_LEAF_BUD) -> Swelling Bud -> Herbaceous Green Shoot
- *   -> Node Formation (Leaves + New Axillary Leaf-Buds) -> Multi-Order Fractal Branching
- *   -> Leonardo's Pipe Model + Cambial Thickening + Leaf Abscission -> Woody Trunk.
+ * Annual Cyclical Ontogeny:
+ *   - Spring (Primavera, days 0-89): Winter chilling breaks endodormancy; cytokinin surges;
+ *     apical and opposite axillary buds break; vigorous shoot elongation; new tender palmate leaves.
+ *   - Summer (Verano, days 90-179): Full canopy maturation; high photosynthesis; Leonardo's Pipe Model
+ *     cambial thickening of trunk and branches; formation and maturation of overwintering buds.
+ *   - Autumn (Otoño, days 180-269): Growth elongation halts; shoots lignify and harden;
+ *     Momiji foliage senescence (scarlet, crimson, orange); trees prepare for winter.
+ *   - Winter (Invierno, days 270-359): Complete natural deciduous leaf abscission (100% bare wood);
+ *     winter bud scales at all nodes; cold dormancy.
+ *   - Year Rollover (Day 360 -> Year+1 Day 0): Chilling satisfies dormancy; cycle renews infinitely!
  */
 class LivingBonsaiOrganism {
   constructor(seed = 0x84A3F2, species = 'BONSAI_MAPLE', startMode = 'SEEDLING_SHOOT') {
@@ -339,20 +351,54 @@ class LivingBonsaiOrganism {
     this.fallingClips = [];
     this.undoStack = [];
 
-    this.simDays = 1;
+    // Time & Calendar
+    this.simDays = 0;
     this.nextId = 1;
-    this.lastFlushDay = 0;
+    this.lastSpringFlushYear = -1;
+    this.lastFlushDay = -999;
 
     if (this.startMode === 'TRAINED_TRUNK') {
       this.initTrainedTrunkAndDormantBuds();
       // Pre-grow initial spring canopy flush so trained pre-bonsai starts with lush shoots
-      for (let i = 0; i < 65; i++) {
-        this.stepBiology(0.05);
-      }
+      this.stepBiology(20.0);
       this.undoStack = [];
     } else {
       this.initSeedlingShoot();
     }
+  }
+
+  /**
+   * Calendar & 4-Season Astronomical State.
+   * Exposes `{ year, seasonIndex (0..3), seasonName, monthName, seasonProgress (0..1), dayOfYear }`.
+   */
+  getSeasonInfo() {
+    const totalDays = Math.max(0, Math.round(this.simDays * 1000) / 1000);
+    const dayOfYear = totalDays % 360;
+    const baseYear = this.startMode === 'SEEDLING_SHOOT' ? 1 : 4;
+    const year = baseYear + Math.floor(totalDays / 360);
+    const seasonIndex = Math.min(3, Math.floor(dayOfYear / 90)); // 0: Spring, 1: Summer, 2: Autumn, 3: Winter
+    const seasonNames = ['PRIMAVERA', 'VERANO', 'OTOÑO', 'INVIERNO'];
+    const seasonName = seasonNames[seasonIndex];
+    const seasonProgress = (dayOfYear % 90) / 90.0;
+
+    // 12 months: 30 days per month
+    const monthNames = [
+      '3月 MAR', '4月 ABR', '5月 MAY',
+      '6月 JUN', '7月 JUL', '8月 AGO',
+      '9月 SEP', '10月 OCT', '11月 NOV',
+      '12月 DIC', '1月 ENE', '2月 FEB'
+    ];
+    const mIdx = Math.min(11, Math.floor(dayOfYear / 30));
+    const monthName = monthNames[mIdx];
+
+    return {
+      year,
+      seasonIndex,
+      seasonName,
+      monthName,
+      seasonProgress,
+      dayOfYear
+    };
   }
 
   /**
@@ -428,7 +474,7 @@ class LivingBonsaiOrganism {
 
   /**
    * Mode A: 'SEEDLING_SHOOT'
-   * Starts as a single young tender green shoot (r0 = 1.4, r1 = 1.1, woodiness = 0.0,
+   * Starts as a young tender green shoot (r0 = 1.4, r1 = 1.1, woodiness = 0.0,
    * generation = 0, remainingInternodes = 4) emerging from the moss mound (y0 = -2 to y1 = 26).
    */
   initSeedlingShoot() {
@@ -439,7 +485,9 @@ class LivingBonsaiOrganism {
     this.leaves = [];
     this.fallingClips = [];
     this.undoStack = [];
-    this.simDays = 1;
+    this.simDays = 0;
+    this.lastSpringFlushYear = 1;
+    this.lastFlushDay = 0;
 
     const initialR0 = 1.4;
     const initialR1 = 1.1;
@@ -464,7 +512,7 @@ class LivingBonsaiOrganism {
       woodiness: 0.0,
       generation: 0,
       internodeIdx: 0,
-      curT: 0.35,
+      curT: 0.85, // Emerging shoot, forms its first node pair within day 1
       dirAngle: leanAngle,
       dirZ: (rng() - 0.5) * 0.15,
       remainingInternodes: 4,
@@ -511,7 +559,9 @@ class LivingBonsaiOrganism {
     this.leaves = [];
     this.fallingClips = [];
     this.undoStack = [];
-    this.simDays = 1;
+    this.simDays = 0;
+    this.lastSpringFlushYear = 4;
+    this.lastFlushDay = 0;
 
     const baseRadius = 22.0 + rng() * 4.0;
     this._initSoilAndNebari(baseRadius);
@@ -653,13 +703,13 @@ class LivingBonsaiOrganism {
   }
 
   /**
-   * Main Causal Biological Simulation Tick with internal sub-stepping (maxStep = 0.05)
-   * so turbo 30x speed is rock-solid and deterministic.
+   * Main Causal Biological Simulation Tick with sub-stepping.
+   * Rock-solid at all speeds (1x, 4x, 12x, 25x, 30x).
    */
   stepBiology(dt) {
     if (!dt || dt <= 0) return;
-    const maxStep = 0.05;
-    let remaining = Math.min(dt, 12.0);
+    const maxStep = dt > 2.0 ? 0.25 : 0.05;
+    let remaining = Math.min(dt, 95.0);
     while (remaining > 1e-6) {
       const subDt = Math.min(maxStep, remaining);
       this._stepSubBiology(subDt);
@@ -670,9 +720,28 @@ class LivingBonsaiOrganism {
   _stepSubBiology(dt) {
     const rng = this.rng;
     const profile = this.profile;
-    this.simDays += dt * 4.5;
 
-    // 1. Reset hormones and count active segments
+    // Calibrated 1x Time Pace:
+    // 1 real second at 1x speed = 0.95 simulation days (~1.05s per day).
+    // A 90-day season takes ~95 seconds at 1x, or accelerates smoothly with 4x/12x/25x or advanceSeason().
+    const dayRate = 0.95;
+    const dayStep = dt * dayRate;
+    this.simDays += dayStep;
+
+    const seasonInfo = this.getSeasonInfo();
+    const { year, seasonIndex, dayOfYear } = seasonInfo;
+
+    // ---------------------------------------------------------
+    // 1. Year Rollover & Annual Spring Awakening (Day 360 -> Year+1 Day 0)
+    // ---------------------------------------------------------
+    if (seasonIndex === 0 && this.lastSpringFlushYear !== year) {
+      this.lastSpringFlushYear = year;
+      this._triggerSpringAwakening(year);
+    }
+
+    // ---------------------------------------------------------
+    // 2. Hormones: Basipetal Auxin & Acropetal Root Cytokinin
+    // ---------------------------------------------------------
     let activeSegCount = 0;
     for (const seg of this.segments) {
       seg.auxin = 0;
@@ -682,50 +751,49 @@ class LivingBonsaiOrganism {
       }
     }
 
-    // 2. Basipetal Auxin (A) downward from active elongating segments (curT < 1) & swelling buds
     let activeMeristemCount = 0;
-    for (const seg of this.segments) {
-      if (seg.pruned) continue;
-      if (seg.curT < 1.0) {
-        activeMeristemCount++;
-        this.propagateAuxinDown(seg.id, 0.95);
+    // Auxin downward from actively elongating shoots and swelling buds
+    if (seasonIndex !== 3) {
+      for (const seg of this.segments) {
+        if (seg.pruned) continue;
+        if (seg.curT < 1.0) {
+          activeMeristemCount++;
+          this.propagateAuxinDown(seg.id, 0.92);
+        }
       }
-    }
-    for (const bud of this.buds) {
-      if (bud.pruned || bud.state === 'SPENT') continue;
-      if (bud.state === 'SWELLING') {
-        activeMeristemCount++;
-        // Propagate auxin below the bud's parent segment so twin opposite buds on the SAME node don't inhibit each other
-        const pSeg = this.SegmentMap.get(bud.parentSegId);
-        if (pSeg && pSeg.parentId) {
-          this.propagateAuxinDown(pSeg.parentId, 0.55);
+      for (const bud of this.buds) {
+        if (bud.pruned || bud.state === 'SPENT') continue;
+        if (bud.state === 'SWELLING') {
+          activeMeristemCount++;
+          const pSeg = this.SegmentMap.get(bud.parentSegId);
+          if (pSeg && pSeg.parentId) {
+            this.propagateAuxinDown(pSeg.parentId, 0.50);
+          }
         }
       }
     }
 
-    // 3. Acropetal Cytokinin (C) / Root Sap Vigor upward & Bud Dormancy Release
+    // Acropetal Cytokinin / Root Sap Vigor
     const baseSeg = this.segments[0];
-    const rootVigor = baseSeg ? Math.min(2.6, 0.75 + baseSeg.r0 * 0.07) : 1.0;
-
-    // Periodic seasonal flush pulse so a seedling continuously develops 4-6 fractal branching orders
-    const isFlushWindow = (this.simDays - this.lastFlushDay) >= 18.0;
-    const seasonalPulse = isFlushWindow ? 0.55 : 0.0;
+    const rootVigor = baseSeg ? Math.min(3.2, 0.85 + baseSeg.r0 * 0.08) : 1.0;
+    const seasonCytokininBonus = seasonIndex === 0 ? 0.75 : seasonIndex === 1 ? 0.35 : 0.0;
 
     for (const seg of this.segments) {
       if (seg.pruned) continue;
-      const distPenalty = Math.pow(0.92, seg.generation);
-      const chopBoost = seg.hasChopScar ? 0.85 : 0.0;
+      const distPenalty = Math.pow(0.93, seg.generation);
+      const chopBoost = seg.hasChopScar ? 0.95 : 0.0;
       const terminalBoost = seg.childrenIds.length === 0 ? 0.35 : 0.15;
-      seg.cytokinin = rootVigor * distPenalty + chopBoost + terminalBoost + seasonalPulse;
+      seg.cytokinin = rootVigor * distPenalty + chopBoost + terminalBoost + seasonCytokininBonus;
     }
 
-    // Dynamic target active meristems: scales with tree development up to canopy cap
-    const maxCanopySegments = 220;
-    const desiredMeristems = activeSegCount >= maxCanopySegments
-      ? 0
-      : Math.min(10, Math.max(4, 3 + Math.floor(activeSegCount / 8)));
+    // ---------------------------------------------------------
+    // 3. Intra-Season Bud Breaking (Spring & early Summer flush)
+    // ---------------------------------------------------------
+    const isFlushWindow = (this.simDays - this.lastFlushDay) >= 16.0;
+    const desiredMeristems = Math.min(24, Math.max(4, 3 + Math.floor(activeSegCount / 7)));
 
-    if (activeSegCount < maxCanopySegments && (activeMeristemCount < desiredMeristems || isFlushWindow)) {
+    if ((seasonIndex === 0 || (seasonIndex === 1 && dayOfYear < 125)) &&
+        (activeMeristemCount < desiredMeristems || isFlushWindow)) {
       if (isFlushWindow) {
         this.lastFlushDay = this.simDays;
       }
@@ -733,34 +801,30 @@ class LivingBonsaiOrganism {
       const candidates = [];
       for (const b of this.buds) {
         if (b.pruned || b.state !== 'DORMANT') continue;
-        // Cap automatic branching at generation 5 so tree stays refined
-        if (b.generation > 5) continue;
         const pSeg = this.SegmentMap.get(b.parentSegId);
-        if (!pSeg || pSeg.pruned || pSeg.curT < 0.95) continue;
+        if (!pSeg || pSeg.pruned || pSeg.curT < 0.92) continue;
 
-        // Hormone ratio C / (1 + beta * A)
         const hormoneRatio = pSeg.cytokinin / (1.0 + 1.8 * pSeg.auxin);
-        const threshold = b.type === 'AXILLARY_LEAF_BUD' ? 0.42 : 0.52;
-        if (hormoneRatio >= threshold || pSeg.auxin < 0.38) {
+        const threshold = b.type === 'AXILLARY_LEAF_BUD' ? 0.40 : 0.50;
+        if (hormoneRatio >= threshold || pSeg.auxin < 0.35) {
           candidates.push({ bud: b, pSeg, hormoneRatio });
         }
       }
 
       if (candidates.length > 0) {
-        // Prioritize axillary leaf-buds across developing generations + chopped stubs
         candidates.sort((a, b) => {
           const scoreA =
             (a.pSeg.hasChopScar ? 3.5 : 0) +
-            (a.bud.type === 'AXILLARY_LEAF_BUD' ? 1.5 : 0.4) +
-            a.bud.generation * 0.45 +
+            (a.bud.type === 'AXILLARY_LEAF_BUD' ? 1.5 : 0.5) +
+            a.bud.generation * 0.35 +
             a.hormoneRatio * 0.8 +
-            rng() * 0.45;
+            rng() * 0.4;
           const scoreB =
             (b.pSeg.hasChopScar ? 3.5 : 0) +
-            (b.bud.type === 'AXILLARY_LEAF_BUD' ? 1.5 : 0.4) +
-            b.bud.generation * 0.45 +
+            (b.bud.type === 'AXILLARY_LEAF_BUD' ? 1.5 : 0.5) +
+            b.bud.generation * 0.35 +
             b.hormoneRatio * 0.8 +
-            rng() * 0.45;
+            rng() * 0.4;
           return scoreB - scoreA;
         });
 
@@ -771,13 +835,12 @@ class LivingBonsaiOrganism {
           picked.state = 'SWELLING';
           picked.swell = Math.max(picked.swell, 0.25);
 
-          // For opposite decussate species (Maple), often wake the opposite twin bud on the same node
-          // so natural dichotomous Y-branching emerges organically!
-          if (profile.phyllotaxy === 'OPPOSITE_DECUSSATE' && activeSegCount < maxCanopySegments - 10) {
+          // For Acer palmatum, wake opposite twin bud on the same node for authentic Y-dichotomy
+          if (profile.phyllotaxy === 'OPPOSITE_DECUSSATE') {
             for (const twinId of candidates[i].pSeg.nodeBudIds) {
               if (twinId === picked.id) continue;
               const twin = this.buds.find(x => x.id === twinId);
-              if (twin && !twin.pruned && twin.state === 'DORMANT' && rng() < 0.72) {
+              if (twin && !twin.pruned && twin.state === 'DORMANT' && rng() < 0.78) {
                 twin.state = 'SWELLING';
                 twin.swell = Math.max(twin.swell, 0.22);
               }
@@ -787,7 +850,9 @@ class LivingBonsaiOrganism {
       }
     }
 
-    // 4. Anchor Buds to Parent Node/Axil & Advance Swelling Buds -> Sprout New Internode Shoots!
+    // ---------------------------------------------------------
+    // 4. Bud Progression: Swelling -> Sprout New Internode Shoots
+    // ---------------------------------------------------------
     for (const bud of this.buds) {
       if (bud.pruned) continue;
       const pSeg = this.SegmentMap.get(bud.parentSegId);
@@ -796,7 +861,7 @@ class LivingBonsaiOrganism {
         continue;
       }
 
-      // Keep bud (x, y, z) anchored to parent node/axil as parent elongates or thickens
+      // Anchor bud (x, y, z) to parent node/axil
       const pCurX1 = pSeg.x0 + (pSeg.x1 - pSeg.x0) * pSeg.curT;
       const pCurY1 = pSeg.y0 + (pSeg.y1 - pSeg.y0) * pSeg.curT;
       const pCurZ1 = pSeg.z0 + (pSeg.z1 - pSeg.z0) * pSeg.curT;
@@ -811,8 +876,9 @@ class LivingBonsaiOrganism {
       bud.y = axY + Math.cos(bud.dirAngle) * 1.1;
       bud.z = axZ + (bud.side || 0) * 1.5;
 
-      if (bud.state === 'SWELLING' && pSeg.curT >= 0.95) {
-        bud.swell += dt * 1.05;
+      // Swelling advances in Spring and early Summer (hibernates in Winter)
+      if (seasonIndex !== 3 && bud.state === 'SWELLING' && pSeg.curT >= 0.95) {
+        bud.swell += dayStep * 0.16;
         if (bud.swell >= 1.0) {
           bud.state = 'SPENT';
           this.sproutInternodeFromBud(bud, pSeg);
@@ -820,7 +886,9 @@ class LivingBonsaiOrganism {
       }
     }
 
-    // 5. Elongate Active Internode Shoots & Form Species-Specific Nodes (Leaves + Axillary Leaf-Buds)
+    // ---------------------------------------------------------
+    // 5. Shoot Elongation & Node Formation (Leaves + Buds)
+    // ---------------------------------------------------------
     for (const seg of this.segments) {
       if (seg.pruned) continue;
 
@@ -851,65 +919,183 @@ class LivingBonsaiOrganism {
       }
 
       if (seg.curT < 1.0) {
-        seg.curT = Math.min(1.0, seg.curT + dt * 0.95);
-        if (seg.curT >= 1.0 && !seg.hasNodeFormed) {
-          seg.hasNodeFormed = true;
-          this.formNodeAtTip(seg);
+        // Growth is active in Spring and early Summer; halts in late Autumn and Winter
+        if (seasonIndex === 0 || (seasonIndex === 1 && dayOfYear < 140)) {
+          const speed = seasonIndex === 0 ? 0.11 : 0.08;
+          seg.curT = Math.min(1.0, seg.curT + dayStep * speed);
+          if (seg.curT >= 1.0 && !seg.hasNodeFormed) {
+            seg.hasNodeFormed = true;
+            this.formNodeAtTip(seg);
+          }
         }
       }
     }
 
-    // 6. Leaf Maturation, Anchor Update & Leaf Abscission on Lignified Wood (woodiness > 0.62)
-    for (const lf of this.leaves) {
-      if (lf.pruned) continue;
-      const pSeg = this.SegmentMap.get(lf.parentSegId);
-      if (!pSeg || pSeg.pruned) {
-        lf.pruned = true;
-        continue;
+    // ---------------------------------------------------------
+    // 6. Annual Leaves: Maturation, Senescence, or Winter Abscission
+    // ---------------------------------------------------------
+    if (seasonIndex === 3) {
+      // INVIERNO (Winter, days 270-359): Complete deciduous leaf abscission!
+      // All remaining leaves detach and fall; the tree is completely bare deciduous wood.
+      for (const lf of this.leaves) {
+        if (!lf.pruned) {
+          lf.pruned = true;
+          lf.abscised = true;
+          this.fallingClips.push({
+            x: lf.x,
+            y: lf.y,
+            z: lf.z,
+            vx: (rng() - 0.5) * 1.2,
+            vy: -0.35,
+            r: lf.maxRadius * 0.45,
+            alpha: 1.0
+          });
+        }
       }
+    } else {
+      // PRIMAVERA, VERANO, OTOÑO: Leaves expand, mature, and photosynthesize
+      for (const lf of this.leaves) {
+        if (lf.pruned) continue;
+        const pSeg = this.SegmentMap.get(lf.parentSegId);
+        if (!pSeg || pSeg.pruned) {
+          lf.pruned = true;
+          continue;
+        }
 
-      const pCurX1 = pSeg.x0 + (pSeg.x1 - pSeg.x0) * pSeg.curT;
-      const pCurY1 = pSeg.y0 + (pSeg.y1 - pSeg.y0) * pSeg.curT;
-      const pCurZ1 = pSeg.z0 + (pSeg.z1 - pSeg.z0) * pSeg.curT;
-      lf.x = pSeg.x0 + (pCurX1 - pSeg.x0) * lf.attachT;
-      lf.y = pSeg.y0 + (pCurY1 - pSeg.y0) * lf.attachT;
-      lf.z = pSeg.z0 + (pCurZ1 - pSeg.z0) * lf.attachT;
+        const pCurX1 = pSeg.x0 + (pSeg.x1 - pSeg.x0) * pSeg.curT;
+        const pCurY1 = pSeg.y0 + (pSeg.y1 - pSeg.y0) * pSeg.curT;
+        const pCurZ1 = pSeg.z0 + (pSeg.z1 - pSeg.z0) * pSeg.curT;
+        lf.x = pSeg.x0 + (pCurX1 - pSeg.x0) * lf.attachT;
+        lf.y = pSeg.y0 + (pCurY1 - pSeg.y0) * lf.attachT;
+        lf.z = pSeg.z0 + (pCurZ1 - pSeg.z0) * lf.attachT;
 
-      if (lf.age < 1.0) {
-        lf.age = Math.min(1.0, lf.age + dt * 0.42);
-      }
+        if (lf.age < 1.0) {
+          lf.age = Math.min(1.0, lf.age + dayStep * 0.055);
+        }
 
-      // Abscission of old nodal leaves once supporting stem has lignified into woody branch/trunk
-      if (pSeg.woodiness > profile.abscissionWoodiness && lf.age >= 1.0) {
-        lf.pruned = true;
-        lf.abscised = true;
-        this.fallingClips.push({
-          x: lf.x,
-          y: lf.y,
-          z: lf.z,
-          vx: (rng() - 0.5) * 1.2,
-          vy: -0.35,
-          r: lf.maxRadius * 0.45,
-          alpha: 1.0
-        });
+        // Natural abscission of old nodal leaves once supporting stem has lignified into heavy wood
+        if (pSeg.woodiness > profile.abscissionWoodiness && lf.age >= 1.0) {
+          lf.pruned = true;
+          lf.abscised = true;
+          this.fallingClips.push({
+            x: lf.x,
+            y: lf.y,
+            z: lf.z,
+            vx: (rng() - 0.5) * 1.2,
+            vy: -0.35,
+            r: lf.maxRadius * 0.45,
+            alpha: 1.0
+          });
+        }
       }
     }
 
-    // 7. Leonardo's Pipe Model + Irreversible Cambial Thickening (bottom-up from tips to basal trunk)
-    this._applyPipeModelAndCambialGrowth(dt);
+    // ---------------------------------------------------------
+    // 7. Leonardo's Pipe Model + Cambial Secondary Thickening
+    // ---------------------------------------------------------
+    this._applyPipeModelAndCambialGrowth(dayStep, seasonIndex);
 
-    // 8. Scale Nebari roots proportionally to basal trunk radius
+    // ---------------------------------------------------------
+    // 8. Scale Nebari Surface Roots with Basal Trunk
+    // ---------------------------------------------------------
     this._updateNebariFromTrunk();
   }
 
   /**
-   * Bottom-up Leonardo Pipe Model (R_target^alpha = sum R_child^alpha + sum r_leaf^alpha)
-   * combined with irreversible cambial ring deposition and strict acropetal taper (r_base > r_mid > r_tip).
+   * Annual Spring Awakening: Triggered at Year Rollover (Day 360 -> Year+1 Day 0).
+   * Winter chilling satisfies endodormancy; auxin is cleared, cytokinin surges,
+   * and terminal & opposite decussate buds across the crown break into fresh shoots!
    */
-  _applyPipeModelAndCambialGrowth(dt) {
+  _triggerSpringAwakening(year) {
+    const rng = this.rng;
+    const profile = this.profile;
+
+    // 1. Chilling satisfaction: Auxin zeroed, root cytokinin surges
+    for (const seg of this.segments) {
+      if (!seg.pruned) {
+        seg.auxin = 0;
+        seg.cytokinin = 2.5 + rng() * 0.8;
+      }
+    }
+
+    // 2. Score dormant buds across the canopy
+    const dormantBuds = this.buds.filter(b => !b.pruned && b.state === 'DORMANT');
+    if (dormantBuds.length === 0) return;
+
+    const scoredBuds = [];
+    for (const b of dormantBuds) {
+      const pSeg = this.SegmentMap.get(b.parentSegId);
+      if (!pSeg || pSeg.pruned) continue;
+
+      const isTerminalShoot = pSeg.childrenIds.length === 0;
+      const isAxillary = b.type === 'AXILLARY_LEAF_BUD';
+      const isCollar = b.type === 'COLLAR_ACTIVE' || b.type === 'LATENT_TRUNK';
+      const heightBonus = Math.max(0, b.y * 0.03);
+
+      let score = rng() * 1.5;
+      if (isTerminalShoot) score += 4.5;
+      if (isAxillary) score += 2.8;
+      if (pSeg.hasChopScar) score += 3.5;
+      if (isCollar && year <= 2) score += 2.0;
+      score += Math.min(3.0, b.generation * 0.6);
+      score += heightBonus;
+
+      scoredBuds.push({ bud: b, pSeg, score });
+    }
+
+    scoredBuds.sort((a, b) => b.score - a.score);
+
+    // Natural bud break quota that scales with tree maturity without artificial hard limits
+    const baseTrunk = this.segments[0];
+    const trunkCaliberFactor = baseTrunk ? baseTrunk.r0 * 0.5 : 2;
+    const targetWakeCount = Math.min(
+      36,
+      Math.max(4, Math.floor(4 + year * 3.5 + trunkCaliberFactor))
+    );
+
+    const wokeBudIds = new Set();
+    const toWake = Math.min(scoredBuds.length, targetWakeCount);
+
+    for (let i = 0; i < toWake; i++) {
+      const { bud, pSeg } = scoredBuds[i];
+      if (wokeBudIds.has(bud.id)) continue;
+
+      bud.state = 'SWELLING';
+      bud.swell = 0.25 + rng() * 0.25;
+      wokeBudIds.add(bud.id);
+
+      // In Acer palmatum (opposite decussate), wake the opposite twin bud on the same node
+      // to produce the quintessential Japanese Maple dichotomous Y-fork!
+      if (profile.phyllotaxy === 'OPPOSITE_DECUSSATE') {
+        for (const twinId of pSeg.nodeBudIds) {
+          if (twinId === bud.id || wokeBudIds.has(twinId)) continue;
+          const twin = this.buds.find(x => x.id === twinId);
+          if (twin && !twin.pruned && twin.state === 'DORMANT' && rng() < 0.85) {
+            twin.state = 'SWELLING';
+            twin.swell = 0.22 + rng() * 0.22;
+            wokeBudIds.add(twin.id);
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Bottom-up Leonardo Pipe Model (R_target^alpha = sum R_child^alpha + sum r_leaf^alpha)
+   * combined with irreversible cambial secondary xylem ring deposition and strict acropetal taper.
+   */
+  _applyPipeModelAndCambialGrowth(dayStep, seasonIndex) {
     const profile = this.profile;
     const alpha = profile.pipeAlpha;
     const invAlpha = 1.0 / alpha;
+
+    // Seasonal cambium activity factor:
+    // Spring: 0.90 (leaf expansion, active sap flow)
+    // Summer: 1.50 (peak photosynthesis & secondary xylem ring deposition!)
+    // Autumn: 0.55 (lignification & hardening, cambial winding down)
+    // Winter: 0.00 (cambial winter dormancy)
+    const seasonCambiumFactor =
+      seasonIndex === 0 ? 0.90 : seasonIndex === 1 ? 1.50 : seasonIndex === 2 ? 0.55 : 0.0;
 
     // Pre-accumulate leaf vascular demand and photosynthetic sugar production per segment
     const leafPipeMap = new Map();
@@ -972,16 +1158,24 @@ class LivingBonsaiOrganism {
             ? 1.05
             : Math.pow(0.76, seg.generation - 1);
 
-      const cambiumDelta =
-        dt * profile.cambiumRate * Math.pow(Math.max(0.12, seg.phloemFlux), 0.65) * genBoost;
-      const pipeDelta =
-        pipeTargetR0 > seg.r0 ? dt * 2.4 * (pipeTargetR0 - seg.r0) : 0;
+      // Total cambial demand combining Pipe Model target and phloem flux
+      const cambiumFluxTerm =
+        profile.cambiumRate * 0.06 * Math.pow(Math.max(0.12, seg.phloemFlux), 0.55) * genBoost;
+      const pipeFluxTerm =
+        pipeTargetR0 > seg.r0
+          ? profile.cambiumRate * 0.08 * Math.min(6.0, pipeTargetR0 - seg.r0)
+          : 0;
+      const annualRingRate = (cambiumFluxTerm + pipeFluxTerm) * seasonCambiumFactor;
+      const cambiumDelta = Math.min(
+        dayStep * 0.018 * (isRootBase ? 1.4 : 1.0),
+        dayStep * annualRingRate
+      );
 
-      seg.r0 = Math.min(maxR, seg.r0 + pipeDelta + cambiumDelta);
+      seg.r0 = Math.min(maxR, seg.r0 + cambiumDelta);
 
       if (activeChildCount > 0) {
         const minR1FromChild = maxChildR0 * 1.03;
-        const targetR1 = Math.max(seg.r1 + (pipeDelta + cambiumDelta) * 0.80, minR1FromChild);
+        const targetR1 = Math.max(seg.r1 + cambiumDelta * 0.80, minR1FromChild);
         seg.r1 = Math.min(seg.r0 * 0.93, targetR1);
         seg.r0 = Math.min(maxR, Math.max(seg.r0, seg.r1 * 1.06, pipeTargetR0 * 0.94));
       } else {
@@ -990,7 +1184,13 @@ class LivingBonsaiOrganism {
 
       // Progressive lignification (0.0 herbaceous shoot -> 1.0 mature fissured bark)
       if (seg.type === 'INTERNODE' && seg.curT >= 0.95) {
-        const fluxLignin = dt * profile.lignificationRate * (0.30 + 0.25 * Math.min(2.5, seg.phloemFlux * 0.2));
+        const seasonLigninFactor = seasonIndex === 2 ? 1.6 : seasonIndex === 1 ? 1.0 : 0.6;
+        const fluxLignin =
+          dayStep *
+          profile.lignificationRate *
+          0.025 *
+          seasonLigninFactor *
+          (0.30 + 0.25 * Math.min(2.5, seg.phloemFlux * 0.2));
         const radialLignin = Math.max(0, (seg.r0 - 1.4) / 4.8);
         seg.woodiness = Math.min(1.0, Math.max(seg.woodiness + fluxLignin, radialLignin));
       }
@@ -1081,7 +1281,7 @@ class LivingBonsaiOrganism {
 
   /**
    * Called when an internode reaches full length (curT == 1.0).
-   * Spawns leaves and AXILLARY_LEAF_BUDs according to species phyllotaxy,
+   * Spawns leaves and AXILLARY_LEAF_BUDs according to species phyllotaxy (opposite decussate for Acer palmatum),
    * and continues apical elongation if remainingInternodes > 0.
    */
   formNodeAtTip(seg) {
@@ -1092,12 +1292,14 @@ class LivingBonsaiOrganism {
 
     let nodeSides = [-1, 1];
     if (profile.phyllotaxy === 'ALTERNATE_ZIGZAG') {
-      // Alternate distichous phyllotaxy: 1 leaf + 1 alternating axillary leaf-bud per node
       const altSide = (seg.internodeIdx + seg.generation) % 2 === 0 ? 1 : -1;
       nodeSides = [altSide];
     } else if (profile.phyllotaxy === 'WHORLED_CANDLE') {
       nodeSides = isTerminal ? [-1, 0, 1] : [-1, 1];
     }
+
+    // Opposite decussate 3D rotation at alternating nodes
+    const nodeZTilt = profile.phyllotaxy === 'OPPOSITE_DECUSSATE' && seg.internodeIdx % 2 === 1 ? 0.38 : 0.0;
 
     for (const side of nodeSides) {
       const effectiveSide = side === 0 ? (rng() > 0.5 ? 1 : -1) : side;
@@ -1108,7 +1310,7 @@ class LivingBonsaiOrganism {
           ? seg.dirAngle + (rng() - 0.5) * 0.22
           : seg.dirAngle + side * spreadAng;
 
-      // Spawn leaf at node (for pine whorl center bud, pair with needle cluster too)
+      // Spawn leaf at node
       let leafId = null;
       if (side !== 0 || profile.phyllotaxy !== 'WHORLED_CANDLE') {
         const leafAngle =
@@ -1126,7 +1328,7 @@ class LivingBonsaiOrganism {
           z: seg.z1,
           side: effectiveSide,
           angle: leafAngle,
-          tiltZ: effectiveSide * 0.25 + (rng() - 0.5) * 0.3,
+          tiltZ: effectiveSide * 0.25 + (rng() - 0.5) * 0.25 + (effectiveSide * nodeZTilt),
           maxRadius: (isTerminal ? 18 + rng() * 6 : 24 + rng() * 8) * ramScale,
           petioleLen: (isTerminal ? 9 + rng() * 4 : 13 + rng() * 5) * ramScale,
           age: 0.05,
@@ -1151,7 +1353,7 @@ class LivingBonsaiOrganism {
         y: seg.y1 + Math.cos(budAngle) * 1.1,
         z: seg.z1 + effectiveSide * 1.5,
         dirAngle: budAngle,
-        dirZ: seg.dirZ + (rng() - 0.5) * 0.32,
+        dirZ: seg.dirZ + (rng() - 0.5) * 0.32 + (effectiveSide * nodeZTilt),
         generation: seg.generation + 1,
         remainingInternodes: seg.generation === 0 ? 3 : 2 + (rng() > 0.55 ? 1 : 0),
         hasWire: false,
@@ -1166,7 +1368,6 @@ class LivingBonsaiOrganism {
       const contraction = Math.pow(profile.internodeContraction, Math.max(0, seg.generation));
       const nextLen = (profile.baseInternodeLen + rng() * profile.internodeLenVar) * contraction;
 
-      // In Ulmus (ALTERNATE_ZIGZAG), deflect stem in opposite direction of the alternating leaf (±14°)
       let deflection = (rng() - 0.5) * 0.16;
       if (profile.phyllotaxy === 'ALTERNATE_ZIGZAG') {
         const altSide = (seg.internodeIdx + seg.generation) % 2 === 0 ? 1 : -1;
@@ -1210,7 +1411,6 @@ class LivingBonsaiOrganism {
   pruneSegment(segId) {
     const seg = this.SegmentMap.get(segId);
     if (!seg || seg.pruned) return false;
-    // Allow pruning any segment except the root base segments[0]
     if (this.segments[0] && seg.id === this.segments[0].id) return false;
     if (!seg.parentId) return false;
 
@@ -1272,7 +1472,7 @@ class LivingBonsaiOrganism {
         }
       }
 
-      // 2. Also check parent's parent if parentSeg had fewer than 2 dormant buds
+      // 2. Also check grandparent if parentSeg had fewer than 2 dormant buds
       if (wokeBudIds.length < 2 && parentSeg.parentId) {
         const grandParent = this.SegmentMap.get(parentSeg.parentId);
         if (grandParent && !grandParent.pruned) {
@@ -1286,7 +1486,7 @@ class LivingBonsaiOrganism {
         }
       }
 
-      // 3. Compensatory back-budding on other dormant AXILLARY_LEAF_BUDs if still < 2 woken
+      // 3. Compensatory back-budding on other dormant AXILLARY_LEAF_BUDs
       if (wokeBudIds.length < 2) {
         const extraBuds = this.buds.filter(b => !b.pruned && b.state === 'DORMANT');
         extraBuds.sort((a, b) => {
@@ -1301,8 +1501,7 @@ class LivingBonsaiOrganism {
         }
       }
 
-      // 4. If parentSeg had no remaining buds on itself (e.g. trunk-chopped old wood whose buds were already spent),
-      // form 2 collar axillary/adventitious buds right below the chop scar!
+      // 4. If parentSeg had no remaining buds on itself, form 2 collar buds right below cut
       const activeOnParent = this.buds.filter(
         b => b.parentSegId === parentSeg.id && !b.pruned && b.state === 'SWELLING'
       );
@@ -1445,27 +1644,29 @@ class LivingBonsaiOrganism {
   }
 
   burstSpringFlush() {
-    const dormant = this.buds.filter(b => !b.pruned && b.state === 'DORMANT');
-    dormant.sort((a, b) => b.generation - a.generation || this.rng() - 0.5);
-    for (let i = 0; i < Math.min(5, dormant.length); i++) {
-      dormant[i].state = 'SWELLING';
-      dormant[i].swell = Math.max(dormant[i].swell, 0.5);
+    this._triggerSpringAwakening(this.getSeasonInfo().year);
+    for (let i = 0; i < 35; i++) {
+      this._stepSubBiology(0.1);
     }
-    this.stepBiology(1.75);
   }
 
   /**
-   * Advances a complete seasonal flush cycle (~25-30 simDays) with bud awakening,
-   * shoot elongation, leaf maturation, and secondary trunk thickening.
+   * Advances simulation to the next season (90 simulation days).
+   * Spring -> Summer -> Autumn -> Winter -> Year+1 Spring!
    */
   advanceSeason() {
-    const dormant = this.buds.filter(b => !b.pruned && b.state === 'DORMANT' && b.generation <= 6);
-    dormant.sort((a, b) => b.generation - a.generation || this.rng() - 0.5);
-    for (let i = 0; i < Math.min(6, dormant.length); i++) {
-      dormant[i].state = 'SWELLING';
-      dormant[i].swell = Math.max(dormant[i].swell, 0.45);
+    const currentDays = Math.round(this.simDays * 100) / 100;
+    const targetDay = (Math.floor((currentDays + 0.05) / 90) + 1) * 90;
+    const daysToAdvance = Math.max(1, targetDay - currentDays);
+
+    const stepDaySize = 1.0;
+    let rem = daysToAdvance;
+    while (rem > 1e-4) {
+      const chunk = Math.min(stepDaySize, rem);
+      this._stepSubBiology(chunk / 0.95);
+      rem -= chunk;
     }
-    this.stepBiology(5.5);
+    this.simDays = targetDay;
   }
 
   collectDescendants(segId, out) {
@@ -1626,8 +1827,9 @@ function createAsciiFontAtlas(THREE = window.THREE) {
 }
 
 /**
- * Creates a custom 5-lobed palmate Japanese Maple leaf BufferGeometry (Acer palmatum)
- * with serrated sawtooth margins, elevated central vein ridge, and vertex colors.
+ * Creates a custom 5-lobed palmate Japanese Maple leaf BufferGeometry (Acer palmatum / Yamamomiji)
+ * with 5 primary radiating lobes + 2 basal spur teeth, deeply incised sinuses,
+ * double-serrate sawtooth margins, elevated dorsal midrib ridge, and vertex colors.
  * @param {object} THREE - Three.js namespace
  * @returns {THREE.BufferGeometry}
  */
@@ -1636,17 +1838,22 @@ function createPalmateMapleLeafGeometry(THREE = window.THREE) {
   const normals = [];
   const colors = [];
 
-  // 5 radiating lobes of a Japanese Maple leaf: Basal L/R, Lateral L/R, Central
+  // 5 primary radiating lobes + 2 basal spur lobes of Acer palmatum (Japanese Mountain Maple):
+  // Central (0.0 rad), Lateral L/R (±0.72 rad), Basal L/R (±1.42 rad), Basal Spurs (±1.90 rad)
   const lobes = [
-    { ang: -1.40, len: 0.56, wid: 0.20 },
-    { ang:  1.40, len: 0.56, wid: 0.20 },
-    { ang: -0.70, len: 0.86, wid: 0.25 },
-    { ang:  0.70, len: 0.86, wid: 0.25 },
-    { ang:  0.00, len: 1.00, wid: 0.27 }
+    { ang:  0.00, len: 1.00, wid: 0.25, zArch: 0.040 }, // Central terminal lobe
+    { ang: -0.72, len: 0.86, wid: 0.23, zArch: 0.035 }, // Left lateral lobe
+    { ang:  0.72, len: 0.86, wid: 0.23, zArch: 0.035 }, // Right lateral lobe
+    { ang: -1.42, len: 0.58, wid: 0.18, zArch: 0.025 }, // Left basal lobe
+    { ang:  1.42, len: 0.58, wid: 0.18, zArch: 0.025 }, // Right basal lobe
+    { ang: -1.90, len: 0.28, wid: 0.11, zArch: 0.015 }, // Left basal spur tooth
+    { ang:  1.90, len: 0.28, wid: 0.11, zArch: 0.015 }  // Right basal spur tooth
   ];
 
-  const veinCol = [1.32, 1.38, 1.15]; // Bright midrib vein highlight
-  const edgeCol = [1.12, 1.18, 1.05];
+  const veinCol = [1.34, 1.40, 1.16];        // Luminous midrib / radiating vein ridge
+  const edgeCol = [1.12, 1.18, 1.04];        // Sharp sawtooth margin highlight
+  const laminaCol = [0.96, 1.00, 0.94];      // Leaf blade tissue
+  const petioleBaseCol = [1.25, 0.95, 0.86]; // Warm petiole collar junction
 
   const pushTri = (pA, pB, pC, cA, cB, cC, nX, nY, nZ) => {
     positions.push(...pA, ...pB, ...pC);
@@ -1655,7 +1862,7 @@ function createPalmateMapleLeafGeometry(THREE = window.THREE) {
   };
 
   for (const lobe of lobes) {
-    const steps = 6;
+    const steps = 8;
     const cosA = Math.cos(lobe.ang);
     const sinA = Math.sin(lobe.ang);
 
@@ -1663,11 +1870,12 @@ function createPalmateMapleLeafGeometry(THREE = window.THREE) {
       const u0 = s / steps;
       const u1 = (s + 1) / steps;
 
-      // Serrated sawtooth width profile
-      const tooth0 = 1.0 + (s % 2 === 1 ? 0.22 : -0.08);
-      const tooth1 = 1.0 + ((s + 1) % 2 === 1 ? 0.22 : -0.08);
-      const w0 = lobe.wid * Math.sin(Math.pow(u0, 0.65) * Math.PI) * tooth0;
-      const w1 = lobe.wid * Math.sin(Math.pow(u1, 0.65) * Math.PI) * tooth1;
+      // Serrated sawtooth width profile with incised sinuses and double-toothed margin
+      const tooth0 = 1.0 + (s % 2 === 1 ? 0.22 : -0.08) + Math.sin(u0 * Math.PI * 4.0) * 0.05;
+      const tooth1 = 1.0 + ((s + 1) % 2 === 1 ? 0.22 : -0.08) + Math.sin(u1 * Math.PI * 4.0) * 0.05;
+
+      const w0 = lobe.wid * Math.sin(Math.pow(u0, 0.68) * Math.PI) * tooth0;
+      const w1 = lobe.wid * Math.sin(Math.pow(u1, 0.68) * Math.PI) * tooth1;
 
       const l0 = u0 * lobe.len;
       const l1 = u1 * lobe.len;
@@ -1678,20 +1886,36 @@ function createPalmateMapleLeafGeometry(THREE = window.THREE) {
         return [x, y, zHeight];
       };
 
-      // Central vein ridge is slightly elevated in Z for 3D normal contrast
-      const c0 = toWorld(l0, 0, 0.08);
-      const c1 = toWorld(l1, 0, 0.08);
+      // Elevated central vein ridge with gentle longitudinal dorsal arch for 3D ASCII relief
+      const zMid0 = 0.07 * (1.0 - u0 * 0.5) + lobe.zArch * Math.sin(u0 * Math.PI);
+      const zMid1 = 0.07 * (1.0 - u1 * 0.5) + lobe.zArch * Math.sin(u1 * Math.PI);
+
+      const c0 = toWorld(l0, 0, zMid0);
+      const c1 = toWorld(l1, 0, zMid1);
       const left0 = toWorld(l0, -w0, 0.0);
       const left1 = toWorld(l1, -w1, 0.0);
       const right0 = toWorld(l0, w0, 0.0);
       const right1 = toWorld(l1, w1, 0.0);
 
-      // Left half of lobe segment
-      pushTri(c0, left0, c1, veinCol, edgeCol, veinCol, -0.18, 0.25, 0.95);
-      pushTri(left0, left1, c1, edgeCol, edgeCol, veinCol, -0.18, 0.25, 0.95);
+      // Warm petiole collar tint at base of each lobe
+      const midCol0 = u0 < 0.15 ? petioleBaseCol : veinCol;
+      const midCol1 = u1 < 0.15 ? petioleBaseCol : veinCol;
+      const edCol0 = (s % 2 === 1) ? edgeCol : laminaCol;
+      const edCol1 = ((s + 1) % 2 === 1) ? edgeCol : laminaCol;
+
+      // Left half of lobe segment (angled outward normal catches directional sun light)
+      const nLeftX = -0.22 * cosA - 0.12 * sinA;
+      const nLeftY =  0.22 * sinA - 0.12 * cosA;
+      const nLeftZ =  0.94;
+      pushTri(c0, left0, c1, midCol0, edCol0, midCol1, nLeftX, nLeftY, nLeftZ);
+      pushTri(left0, left1, c1, edCol0, edCol1, midCol1, nLeftX, nLeftY, nLeftZ);
+
       // Right half of lobe segment
-      pushTri(c0, c1, right0, veinCol, veinCol, edgeCol, 0.18, 0.25, 0.85);
-      pushTri(right0, c1, right1, edgeCol, veinCol, edgeCol, 0.18, 0.25, 0.85);
+      const nRightX =  0.22 * cosA - 0.12 * sinA;
+      const nRightY = -0.22 * sinA - 0.12 * cosA;
+      const nRightZ =  0.94;
+      pushTri(c0, c1, right0, midCol0, midCol1, edCol0, nRightX, nRightY, nRightZ);
+      pushTri(right0, c1, right1, edCol0, midCol1, edCol1, nRightX, nRightY, nRightZ);
     }
   }
 
@@ -1864,9 +2088,9 @@ function createPineNeedleClusterGeometry(THREE = window.THREE) {
 
 const THREE = window.THREE;
 
-const MAX_CYLINDERS = 3500;
-const MAX_SPHERES = 2500;
-const MAX_LEAVES = 3500;
+const MAX_CYLINDERS = 5000;
+const MAX_SPHERES = 3500;
+const MAX_LEAVES = 5000;
 
 class AsciiThreeRenderer {
   /**
@@ -2067,7 +2291,66 @@ class AsciiThreeRenderer {
     this._segVec = new THREE.Vector3();
     this._midVec = new THREE.Vector3();
 
+    // Pre-computed resting winter fallen leaves on the moss mound and pot rim lip
+    this._winterFallenLeaves = this._initWinterFallenLeaves();
+
     this.resize(this.viewW, this.viewH);
+  }
+
+  /**
+   * Pre-generates realistic resting fallen Momiji leaves scattered organically
+   * on the domed velvet moss mound and terracotta pot rim lip during winter dormancy.
+   * @returns {Array<object>}
+   */
+  _initWinterFallenLeaves() {
+    const list = [];
+    const rng = (seed) => {
+      let t = (seed + 0x6D2B79F5) | 0;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+
+    // 16 leaves resting organically on the domed moss mound
+    for (let i = 0; i < 16; i++) {
+      const angle = (i / 16) * Math.PI * 2 + (rng(i * 17 + 1) - 0.5) * 0.52;
+      const dist = 16 + rng(i * 31 + 5) * 64; // mm from trunk center
+      const x = Math.sin(angle) * dist;
+      const z = Math.cos(angle) * dist * 0.48 + (rng(i * 43 + 7) - 0.5) * 12;
+      const domeDrop = (dist / 85) * 3.4;
+      const y = -1.6 - domeDrop;
+      const scale = 11.0 + rng(i * 53 + 9) * 4.5;
+      const rotZ = rng(i * 67 + 11) * Math.PI * 2;
+      const rotX = -1.45 + (rng(i * 73 + 13) - 0.5) * 0.22;
+      const rotY = (rng(i * 89 + 17) - 0.5) * 0.35;
+
+      // Varied Momiji senescence color: scarlet, deep crimson, burnt vermilion, golden-amber
+      const colorType = i % 4;
+      const hue = colorType === 0 ? 0.99 : colorType === 1 ? 0.96 : colorType === 2 ? 0.04 : 0.10;
+      const sat = 0.82 + rng(i * 97 + 19) * 0.12;
+      const light = 0.26 + rng(i * 109 + 23) * 0.14;
+
+      list.push({ x, y, z, rotX, rotY, rotZ, scale, hue, sat, light });
+    }
+
+    // 6 leaves resting on the terracotta pot rim lip
+    const rimOffsets = [-92, -84, -76, 74, 82, 90];
+    for (let i = 0; i < rimOffsets.length; i++) {
+      const x = rimOffsets[i] + (rng(i * 37 + 31) - 0.5) * 7;
+      const y = -7.5;
+      const z = 8 + (rng(i * 47 + 37) - 0.5) * 15;
+      const scale = 11.5 + rng(i * 59 + 41) * 3.5;
+      const rotZ = rng(i * 71 + 43) * Math.PI * 2;
+      const rotX = -1.50;
+      const rotY = (rng(i * 83 + 47) - 0.5) * 0.25;
+      const hue = (i % 2 === 0) ? 0.98 : 0.05;
+      const sat = 0.85;
+      const light = 0.29;
+
+      list.push({ x, y, z, rotX, rotY, rotZ, scale, hue, sat, light });
+    }
+
+    return list;
   }
 
   /**
@@ -2076,10 +2359,10 @@ class AsciiThreeRenderer {
   _buildPotAndMossMeshes() {
     // Domed green moss mound on top of pot
     const mossGeom = new THREE.CylinderGeometry(96, 102, 10, 24, 1);
-    const mossMat = new THREE.MeshLambertMaterial({ color: 0x56a84c });
-    const mossMesh = new THREE.Mesh(mossGeom, mossMat);
-    mossMesh.position.set(0, -4, -5);
-    this.potGroup.add(mossMesh);
+    this.mossMat = new THREE.MeshLambertMaterial({ color: 0x56a84c });
+    this.mossMesh = new THREE.Mesh(mossGeom, this.mossMat);
+    this.mossMesh.position.set(0, -4, -5);
+    this.potGroup.add(this.mossMesh);
 
     // Terracotta Pot Rim Lip
     const lipGeom = new THREE.CylinderGeometry(108, 106, 6, 24, 1);
@@ -2120,24 +2403,46 @@ class AsciiThreeRenderer {
   }
 
   /**
-   * Computes continuous bark RGB color based on segment woodiness (0.0 -> 1.0) and species.
-   * - woodiness = 0.0: bright green / crimson-tipped tender herbaceous shoot
+   * Computes continuous bark RGB color across the 4 seasons based on segment woodiness (0.0 -> 1.0),
+   * species, and seasonal dormancy state.
+   * - woodiness = 0.0: tender shoot (Spring tender reddish-green tint -> Summer emerald -> Autumn olive -> Winter ruby-plum)
    * - woodiness = 0.35: olive / reddish-brown semi-lignified 1st-year twig
-   * - woodiness = 0.75..1.0: mature fissured silver-taupe / grey-brown woody trunk
+   * - woodiness = 0.75..1.0: mature fissured silver-taupe / grey-brown woody trunk (sculptural in winter)
    */
-  _setBarkColor(targetColor, woodiness, species) {
+  _setBarkColor(targetColor, woodiness, species, seasonIndex = 0, seasonProgress = 0.5) {
     const w = Math.max(0, Math.min(1, woodiness || 0));
 
-    // Stage 0: Tender green shoot
-    const r0 = 0.45, g0 = 0.84, b0 = 0.36;
-    // Stage 1 (w ~ 0.35): Olive / reddish-brown young woody twig
-    const r1 = 0.66, g1 = 0.56, b1 = 0.40;
-    // Stage 2 (w -> 1.0): Mature woody trunk bark (species-tuned)
-    let r2 = 0.75, g2 = 0.72, b2 = 0.65; // Acer palmatum silver-taupe bark
-    if (species === 'BONSAI_ULMUS') {
-      r2 = 0.68; g2 = 0.63; b2 = 0.55; // Ulmus warm grey-ochre bark
+    // Stage 0: Tender young shoot (season-tuned for Acer palmatum)
+    let r0 = 0.45, g0 = 0.84, b0 = 0.36;
+    if (seasonIndex === 0) {
+      // Primavera (Spring): young shoots have tender reddish-green tint
+      r0 = 0.62; g0 = 0.78; b0 = 0.32;
+    } else if (seasonIndex === 1) {
+      // Verano (Summer): lush green shoots
+      r0 = 0.38; g0 = 0.82; b0 = 0.32;
+    } else if (seasonIndex === 2) {
+      // Otoño (Autumn): shoots lignify with warm amber-crimson undertones
+      r0 = 0.66; g0 = 0.58; b0 = 0.36;
+    } else if (seasonIndex === 3) {
+      // Invierno (Winter): dormant fine twigs have sculptural ruby-plum / coral-bark luster
+      r0 = 0.72; g0 = 0.38; b0 = 0.36;
+    }
+
+    // Stage 1 (w ~ 0.35): Semi-lignified young woody twig
+    let r1 = 0.66, g1 = 0.56, b1 = 0.40;
+    if (seasonIndex === 3) {
+      r1 = 0.62; g1 = 0.50; b1 = 0.42; // Deep sculptural taupe-brown in winter
+    }
+
+    // Stage 2 (w -> 1.0): Mature woody trunk bark (Acer palmatum silver-taupe)
+    let r2 = 0.75, g2 = 0.72, b2 = 0.65;
+    if (seasonIndex === 3) {
+      // In winter, crisp sculptural silver-taupe trunk against dark background
+      r2 = 0.78; g2 = 0.75; b2 = 0.70;
+    } else if (species === 'BONSAI_ULMUS') {
+      r2 = 0.68; g2 = 0.63; b2 = 0.55;
     } else if (species === 'BONSAI_PINE') {
-      r2 = 0.58; g2 = 0.51; b2 = 0.46; // Pinus thunbergii dark scaly bark
+      r2 = 0.58; g2 = 0.51; b2 = 0.46;
     }
 
     if (w < 0.38) {
@@ -2178,7 +2483,49 @@ class AsciiThreeRenderer {
       seasonTheme = 'SPRING'
     } = interactionState;
 
-    // Swap leaf BufferGeometry whenever species changes
+    // 0. Determine Season from biological organism or interaction override
+    const seasonInfo = (typeof bonsai.getSeasonInfo === 'function')
+      ? bonsai.getSeasonInfo()
+      : null;
+
+    let seasonIndex = 0; // 0: Primavera (Spring), 1: Verano (Summer), 2: Otoño (Autumn), 3: Invierno (Winter)
+    let seasonName = 'PRIMAVERA';
+    let seasonProgress = 0.0;
+    let year = 1;
+
+    if (seasonInfo) {
+      seasonIndex = (seasonInfo.seasonIndex !== undefined) ? seasonInfo.seasonIndex : 0;
+      seasonName = seasonInfo.seasonName || ['PRIMAVERA', 'VERANO', 'OTOÑO', 'INVIERNO'][seasonIndex];
+      seasonProgress = (seasonInfo.seasonProgress !== undefined) ? seasonInfo.seasonProgress : 0.0;
+      year = seasonInfo.year || 1;
+    } else if (typeof bonsai.simDays === 'number') {
+      const d = ((bonsai.simDays % 360) + 360) % 360;
+      seasonIndex = Math.floor(d / 90);
+      seasonProgress = (d % 90) / 90;
+      year = Math.floor(bonsai.simDays / 360) + 1;
+      seasonName = ['PRIMAVERA', 'VERANO', 'OTOÑO', 'INVIERNO'][seasonIndex];
+    }
+
+    // UI explicit season override if provided
+    if (interactionState.seasonOverride !== undefined && interactionState.seasonOverride !== null) {
+      seasonIndex = Number(interactionState.seasonOverride) % 4;
+      seasonName = ['PRIMAVERA', 'VERANO', 'OTOÑO', 'INVIERNO'][seasonIndex];
+    }
+
+    // Update moss mound tone according to season
+    if (this.mossMat) {
+      if (seasonIndex === 0) {
+        this.mossMat.color.setRGB(0.34, 0.66, 0.30); // Spring fresh velvet green
+      } else if (seasonIndex === 1) {
+        this.mossMat.color.setRGB(0.24, 0.51, 0.20); // Summer deep emerald
+      } else if (seasonIndex === 2) {
+        this.mossMat.color.setRGB(0.36, 0.45, 0.20); // Autumn warm olive
+      } else {
+        this.mossMat.color.setRGB(0.27, 0.35, 0.22); // Winter cool dormant moss
+      }
+    }
+
+    // Swap leaf BufferGeometry whenever species changes (Acer palmatum primary)
     if (bonsai.species && bonsai.species !== this.currentSpecies) {
       const nextGeom = this.speciesGeometries[bonsai.species] || this.speciesGeometries.BONSAI_MAPLE;
       this.leafInstanced.geometry = nextGeom;
@@ -2267,14 +2614,14 @@ class AsciiThreeRenderer {
         const effectiveWoodiness = (seg.type === 'TRUNK' || seg.type === 'TRUNK_HEAD')
           ? Math.max(0.85, seg.woodiness ?? 1.0)
           : (seg.woodiness ?? 0.0);
-        this._setBarkColor(tmpColor, effectiveWoodiness, bonsai.species);
+        this._setBarkColor(tmpColor, effectiveWoodiness, bonsai.species, seasonIndex, seasonProgress);
       }
 
       pushCylinder(seg.x0, seg.y0, seg.z0, curX1, curY1, curZ1, seg.r0, seg.r1, tmpColor);
 
       // Nodal bark ridge on lignified segments so thickened seedling shoots show realistic trunk rings
       if (!isCutHighlight && (seg.woodiness > 0.55 || seg.r0 > 4.0) && seg.curT >= 0.98) {
-        this._setBarkColor(tmpColor, Math.min(1.0, (seg.woodiness || 0.6) + 0.12), bonsai.species);
+        this._setBarkColor(tmpColor, Math.min(1.0, (seg.woodiness || 0.6) + 0.12), bonsai.species, seasonIndex, seasonProgress);
         pushSphere(curX1, curY1, curZ1, seg.r1 * 1.08, Math.max(1.2, seg.r1 * 0.32), seg.r1 * 1.08, tmpColor);
       }
 
@@ -2319,6 +2666,8 @@ class AsciiThreeRenderer {
 
     // 4. Axillary Leaf-Buds (AXILLARY_LEAF_BUD) & Collar/Latent Buds
     let activeBudCount = 0;
+    const isDeciduousWinter = (seasonIndex === 3);
+
     if (bonsai.buds) {
       for (const bud of bonsai.buds) {
         if (bud.pruned || bud.state === 'SPENT') continue;
@@ -2340,7 +2689,7 @@ class AsciiThreeRenderer {
           pushSphere(bx, by, bz + 2.0, 3.1 * pulse, 3.6 * pulse, 3.1 * pulse, tmpColor);
         } else if (bud.state === 'SWELLING') {
           activeBudCount++;
-          // Glowing crimson-lime swelling bud breaking dormancy!
+          // Spring bud break: glowing crimson-lime swelling bud breaking dormancy!
           const budPhase = typeof bud.id === 'number'
             ? bud.id
             : (parseInt(String(bud.id).replace(/\D+/g, ''), 10) || 0);
@@ -2349,8 +2698,14 @@ class AsciiThreeRenderer {
           const r = (2.1 + swell * 2.3) * pulse;
           tmpColor.setRGB(0.96 - swell * 0.22, 0.54 + swell * 0.42, 0.34);
           pushSphere(bx, by, bz + 1.5, r, r * 1.32, r, tmpColor);
+        } else if (isDeciduousWinter) {
+          // Invierno (Winter): dormant winter bud scales visible at each node
+          activeBudCount++;
+          tmpColor.setRGB(0.86, 0.28, 0.30); // Deep ruby-crimson protective perulae / bud scales
+          pushSphere(bx, by, bz, 1.85, 2.35, 1.85, tmpColor);
         } else {
           // Dormant Axillary Leaf-Bud or Latent Collar Bud: warm ruby-amber scale
+          activeBudCount++;
           const isAxillary = bud.type === 'AXILLARY_LEAF_BUD';
           if (isAxillary) {
             tmpColor.setRGB(0.88, 0.46, 0.34);
@@ -2364,8 +2719,10 @@ class AsciiThreeRenderer {
     }
 
     // 5. Petioles & Species-Specific Leaf Blades (Maple / Ulmus / Pine)
+    // NOTE: In Invierno (Winter), the crown has ZERO leaves on the branches (all leaves abscised)!
     let activeLeafCount = 0;
-    if (bonsai.leaves) {
+
+    if (!isDeciduousWinter && bonsai.leaves) {
       for (const lf of bonsai.leaves) {
         if (lf.pruned) continue;
         const pSeg = bonsai.SegmentMap ? bonsai.SegmentMap.get(lf.parentSegId) : null;
@@ -2387,19 +2744,28 @@ class AsciiThreeRenderer {
         const bladeBaseY = lf.y + Math.cos(pAngle) * curPetioleLen - 1.8 * age;
         const bladeBaseZ = (lf.z || 0) + 4.0 + (lf.side || 1) * 3.0;
 
-        // Slender Reddish-Coral Petiole (highlighted if hovered for defoliation/pruning)
+        // Slender petiole color: tender coral in spring, red in summer, intense scarlet in autumn
         if (isCutHighlight) {
           tmpColor.setRGB(1.0, 0.30, 0.35);
         } else if (isLeafHovered) {
           tmpColor.setRGB(1.0, 0.78, 0.25);
+        } else if (seasonIndex === 0) {
+          tmpColor.setRGB(0.88, 0.36, 0.32); // Spring tender coral-red petiole
+        } else if (seasonIndex === 1) {
+          tmpColor.setRGB(0.82, 0.30, 0.30); // Summer red petiole
         } else {
-          tmpColor.setRGB(0.85, 0.32, 0.32);
+          tmpColor.setRGB(0.92, 0.22, 0.22); // Autumn intense scarlet petiole
         }
         pushCylinder(lf.x, lf.y, lf.z || 0, bladeBaseX, bladeBaseY, bladeBaseZ, 0.65, 0.55, tmpColor);
 
         // Species Leaf Blade Instance
         if (leafIdx < MAX_LEAVES) {
-          const radius = (lf.maxRadius || 16.0) * (0.18 + 0.82 * Math.pow(age, 0.82));
+          // Spring: leaves emerge small and expand as they unfurl
+          let expansion = Math.pow(age, 0.82);
+          if (seasonIndex === 0) {
+            expansion *= Math.min(1.0, 0.35 + 0.65 * (seasonProgress / 0.60));
+          }
+          const radius = (lf.maxRadius || 16.0) * (0.18 + 0.82 * expansion);
           dummyObj.position.set(bladeBaseX, bladeBaseY, bladeBaseZ);
           dummyObj.rotation.set(0.22, (lf.tiltZ || 0) * 0.35, -pAngle);
           dummyObj.scale.set(radius, radius, radius);
@@ -2414,21 +2780,68 @@ class AsciiThreeRenderer {
           } else if (isLeafHovered) {
             // Bright amber-cyan highlight in PINCH / Mekiri defoliation mode
             tmpColor.setRGB(1.0, 0.76, 0.24);
-          } else if (seasonTheme === 'AUTUMN' && bonsai.species !== 'BONSAI_PINE') {
-            // Autumn Momiji crimson & fiery orange (or golden yellow on Ulmus)
-            const baseAutumnHue = bonsai.species === 'BONSAI_ULMUS' ? 0.09 : 0.03;
-            tmpColor.setHSL(baseAutumnHue + hueOff, 0.88, 0.32 + shade * 0.24);
-          } else if (age < 0.38 && bonsai.species !== 'BONSAI_PINE') {
-            // Newly sprouted spring leaf: warm bronze-red / apricot transition to lime
-            const bronzeMix = 1.0 - (age / 0.38);
-            const hue = 0.05 * bronzeMix + (0.29 + hueOff) * (1.0 - bronzeMix);
-            tmpColor.setHSL(hue, 0.82, 0.36 + shade * 0.22);
-          } else {
-            // Mature lush emerald green canopy with depth layering
-            const baseHue = bonsai.species === 'BONSAI_PINE' ? 0.36 : 0.31;
-            const sat = bonsai.species === 'BONSAI_PINE' ? 0.68 : 0.78;
-            const light = 0.24 + shade * 0.30;
-            tmpColor.setHSL(baseHue + hueOff, sat, light);
+          } else if (seasonIndex === 0) {
+            // ==========================================
+            // 🌸 PRIMAVERA (Spring)
+            // Leaves emerge small with bronze-red/apricot hues, unfurling to vibrant yellow-green/lime
+            // ==========================================
+            const unfurlFrac = Math.min(1.0, Math.max(0.0, age * 0.65 + seasonProgress * 0.55));
+            if (unfurlFrac < 0.42) {
+              // Bronze-red / apricot newly unfurled leaf protected by anthocyanins
+              const apricotMix = unfurlFrac / 0.42;
+              const hue = 0.03 + apricotMix * 0.05; // 0.03 (bronze-red) -> 0.08 (apricot)
+              tmpColor.setHSL(hue, 0.85, 0.36 + shade * 0.20);
+            } else {
+              // Unfurling to vibrant yellow-green / lime
+              const limeMix = (unfurlFrac - 0.42) / 0.58;
+              const hue = 0.08 * (1.0 - limeMix) + (0.28 + hueOff) * limeMix;
+              tmpColor.setHSL(hue, 0.84, 0.32 + shade * 0.26);
+            }
+          } else if (seasonIndex === 1) {
+            // ==========================================
+            // ☀️ VERANO (Summer)
+            // Full canopy of deep lush emerald green leaves. High contrast, vigorous appearance.
+            // ==========================================
+            const baseHue = 0.33 + hueOff; // Lush emerald forest green
+            const sat = 0.90;
+            const light = 0.22 + shade * 0.26; // High contrast between sun canopy & deep interior
+            tmpColor.setHSL(baseHue, sat, light);
+          } else if (seasonIndex === 2) {
+            // ==========================================
+            // 🍁 OTOÑO (Autumn - Momiji)
+            // Leaves smoothly transition into stunning Momiji autumn foliage — vivid scarlet,
+            // fiery crimson, deep vermilion, orange, and golden-amber. Individual variance in senescence.
+            // ==========================================
+            const leafIdNum = typeof lf.id === 'number'
+              ? lf.id
+              : (parseInt(String(lf.id).replace(/\D+/g, ''), 10) || 0);
+            const varVal = (Math.abs(Math.sin(leafIdNum * 12.9898 + lf.x * 0.17 + lf.y * 0.23)) * 1000) % 1;
+            const senProgress = Math.max(0.0, Math.min(1.0, seasonProgress * 1.35 - varVal * 0.32));
+
+            if (senProgress < 0.25) {
+              // Early autumn: emerald green transitioning into chartreuse and golden-amber tips
+              const t = senProgress / 0.25;
+              const hue = 0.32 * (1.0 - t) + 0.13 * t; // green -> amber
+              tmpColor.setHSL(hue + hueOff, 0.88, 0.26 + shade * 0.24);
+            } else {
+              // Peak Momiji: individual leaves turn vivid scarlet, fiery crimson, vermilion or golden amber
+              const colorType = Math.floor(varVal * 4.0);
+              let peakHue;
+              if (colorType === 0) {
+                peakHue = 0.99; // Vivid Scarlet (ruby-red)
+              } else if (colorType === 1) {
+                peakHue = 0.96; // Fiery Crimson
+              } else if (colorType === 2) {
+                peakHue = 0.04; // Deep Vermilion / Flame Orange
+              } else {
+                peakHue = 0.10; // Glowing Golden-Amber
+              }
+              const t = (senProgress - 0.25) / 0.75;
+              const curHue = (0.13 * (1.0 - t) + peakHue * t) % 1.0;
+              const sat = 0.88 + varVal * 0.08;
+              const light = 0.30 + shade * 0.22;
+              tmpColor.setHSL(curHue, sat, light);
+            }
           }
 
           this.leafInstanced.setColorAt(leafIdx, tmpColor);
@@ -2437,8 +2850,32 @@ class AsciiThreeRenderer {
       }
     }
 
-    // 6. Falling Pruned Clippings & Abscised Old Trunk Leaves Animation
+    // 6. Resting Fallen Momiji Leaves on the Velvet Moss and Pot Rim Lip (Winter & Late Autumn)
+    if (isDeciduousWinter || (seasonIndex === 2 && seasonProgress > 0.70)) {
+      const winterOpacity = isDeciduousWinter
+        ? 1.0
+        : Math.min(1.0, (seasonProgress - 0.70) / 0.25);
+
+      for (const fl of this._winterFallenLeaves) {
+        if (leafIdx >= MAX_LEAVES) break;
+        dummyObj.position.set(fl.x, fl.y, fl.z);
+        dummyObj.rotation.set(fl.rotX, fl.rotY, fl.rotZ);
+        dummyObj.scale.set(fl.scale, fl.scale, fl.scale);
+        dummyObj.updateMatrix();
+        this.leafInstanced.setMatrixAt(leafIdx, dummyObj.matrix);
+
+        tmpColor.setHSL(fl.hue, fl.sat, fl.light * (0.85 + 0.15 * winterOpacity));
+        this.leafInstanced.setColorAt(leafIdx, tmpColor);
+        leafIdx++;
+      }
+    }
+
+    // 7. Falling Pruned Clippings & Abscised Old Leaves Animation
     if (bonsai.fallingClips) {
+      // Keep falling clips pool bounded for 60-120 FPS performance during high-speed time jumps
+      if (bonsai.fallingClips.length > 60) {
+        bonsai.fallingClips.splice(0, bonsai.fallingClips.length - 60);
+      }
       for (let i = bonsai.fallingClips.length - 1; i >= 0; i--) {
         const clip = bonsai.fallingClips[i];
         clip.x += clip.vx || 0;
@@ -2456,7 +2893,11 @@ class AsciiThreeRenderer {
           dummyObj.scale.set(clipScale, clipScale, clipScale);
           dummyObj.updateMatrix();
           this.leafInstanced.setMatrixAt(leafIdx, dummyObj.matrix);
-          tmpColor.setRGB(0.95 * clip.alpha, 0.42 * clip.alpha, 0.36 * clip.alpha);
+          if (seasonIndex === 2 || seasonIndex === 3) {
+            tmpColor.setRGB(0.95 * clip.alpha, 0.32 * clip.alpha, 0.26 * clip.alpha);
+          } else {
+            tmpColor.setRGB(0.88 * clip.alpha, 0.72 * clip.alpha, 0.35 * clip.alpha);
+          }
           this.leafInstanced.setColorAt(leafIdx, tmpColor);
           leafIdx++;
         }
@@ -2483,7 +2924,11 @@ class AsciiThreeRenderer {
       activeBudCount,
       activeLeafCount,
       activeBranchCount,
-      trunkCaliberMm
+      trunkCaliberMm,
+      seasonIndex,
+      seasonName,
+      seasonProgress,
+      year
     };
   }
 
@@ -3290,9 +3735,8 @@ const container = document.getElementById('canvasContainer');
 const bonsaiAudio = new BonsaiAudioSynth();
 
 let currentSeed = 0x84A3F2;
-let currentSpecies = 'BONSAI_MAPLE';
+let currentSpecies = 'BONSAI_MAPLE'; // Strict focus on Acer palmatum (Arce Japonés // Yamamomiji)
 let currentStartMode = 'SEEDLING_SHOOT'; // 'SEEDLING_SHOOT' | 'TRAINED_TRUNK'
-let seasonTheme = 'SPRING'; // 'SPRING' | 'AUTUMN'
 let simSpeed = 1.0;
 let autoFitFollow = true; // Auto-frame when tree outgrows viewport at high speed
 
@@ -3303,8 +3747,9 @@ const cameraController = new CameraController(asciiRenderer.getCamera());
 // 2. Create Living Bonsai Organism
 let bonsai = null;
 
-function createSpecimen(seed, species, startMode, initialAutoFit = true) {
-  bonsai = new LivingBonsaiOrganism(seed, species, startMode);
+function createSpecimen(seed, species = 'BONSAI_MAPLE', startMode = 'SEEDLING_SHOOT', initialAutoFit = true) {
+  currentSpecies = 'BONSAI_MAPLE';
+  bonsai = new LivingBonsaiOrganism(seed, currentSpecies, startMode);
 
   if (startMode === 'SEEDLING_SHOOT') {
     // Advance slightly so the young shoot displays its first tender leaves & axillary leaf-buds
@@ -3384,16 +3829,8 @@ function updateSpecimenHeaderUI() {
 
   const headerEl = document.getElementById('specimenHeader');
   if (headerEl) {
-    const profile = SPECIES_PROFILES && SPECIES_PROFILES[currentSpecies];
-    const codeName = profile && profile.codeName
-      ? profile.codeName
-      : currentSpecies === 'BONSAI_ULMUS'
-      ? 'ULMUS_PARVIFOLIA'
-      : currentSpecies === 'BONSAI_PINE'
-      ? 'PINUS_THUNBERGII'
-      : 'ACER_PALMATUM';
     const idNum = (currentSeed % 900) + 100;
-    headerEl.innerText = `${codeName} #${idNum}`;
+    headerEl.innerText = `🍁 ACER_PALMATUM #${idNum}`;
   }
 
   const modeBadgeEl = document.getElementById('modeBadge');
@@ -3405,8 +3842,71 @@ function updateSpecimenHeaderUI() {
   }
 }
 
+/**
+ * Normalizes season and calendar info from the bonsai organism or internal phenological calendar.
+ */
+function getBonsaiSeasonInfo(bonsaiInstance) {
+  if (bonsaiInstance && typeof bonsaiInstance.getSeasonInfo === 'function') {
+    const info = bonsaiInstance.getSeasonInfo();
+    if (info && info.seasonName && info.seasonIcon) {
+      return info;
+    }
+  }
+
+  const simDays = bonsaiInstance?.simDays || 0;
+  const baseYear = currentStartMode === 'SEEDLING_SHOOT' ? 1 : 3;
+  const year = Math.max(1, Math.floor(simDays / 360) + baseYear);
+  const dayInYear = Math.floor(((simDays % 360) + 360) % 360);
+  const seasonIndex = Math.floor(dayInYear / 90) % 4; // 0: Spring, 1: Summer, 2: Autumn, 3: Winter
+
+  const seasonNames = ['PRIMAVERA', 'VERANO', 'OTOÑO', 'INVIERNO'];
+  const seasonIcons = ['🌸', '☀️', '🍁', '❄️'];
+  const monthNames = [
+    '3月 MAR', '4月 ABR', '5月 MAY',   // Spring (Days 0-89)
+    '6月 JUN', '7月 JUL', '8月 AGO',   // Summer (Days 90-179)
+    '9月 SEP', '10月 OCT', '11月 NOV', // Autumn (Days 180-269)
+    '12月 DIC', '1月 ENE', '2月 FEB'   // Winter (Days 270-359)
+  ];
+  const monthIndex = Math.floor(dayInYear / 30) % 12;
+  const progressInSeason = (dayInYear % 90) / 90;
+
+  return {
+    year,
+    seasonIndex,
+    seasonName: seasonNames[seasonIndex],
+    seasonIcon: seasonIcons[seasonIndex],
+    monthIndex,
+    monthName: monthNames[monthIndex],
+    dayInYear,
+    progressInSeason,
+    isWinter: seasonIndex === 3
+  };
+}
+
+/**
+ * Updates the visual styling and badge for the 4 seasons.
+ */
+function updateSeasonBadge(seasonInfo) {
+  const badgeEl = document.getElementById('hudSeasonBadge');
+  if (!badgeEl) return;
+
+  const name = seasonInfo.seasonName || 'PRIMAVERA';
+  const icon = seasonInfo.seasonIcon || '🌸';
+  badgeEl.innerText = `${icon} ${name}`;
+
+  if (name === 'PRIMAVERA') {
+    badgeEl.className = 'px-2 py-0.5 rounded font-bold bg-[#281523] border border-[#f472b6] text-[#f472b6] shadow-[0_0_8px_rgba(244,114,182,0.3)] transition-all duration-300';
+  } else if (name === 'VERANO') {
+    badgeEl.className = 'px-2 py-0.5 rounded font-bold bg-[#0c2415] border border-[#4ade80] text-[#4ade80] shadow-[0_0_8px_rgba(74,222,128,0.3)] transition-all duration-300';
+  } else if (name === 'OTOÑO') {
+    badgeEl.className = 'px-2 py-0.5 rounded font-bold bg-[#2a1306] border border-[#fb923c] text-[#fb923c] shadow-[0_0_8px_rgba(251,146,60,0.35)] transition-all duration-300';
+  } else if (name === 'INVIERNO') {
+    badgeEl.className = 'px-2 py-0.5 rounded font-bold bg-[#091e30] border border-[#38bdf8] text-[#38bdf8] shadow-[0_0_8px_rgba(56,189,248,0.3)] transition-all duration-300';
+  }
+}
+
 function setSimSpeed(spd) {
-  simSpeed = Math.max(0, Math.min(30, Number(spd) || 0));
+  simSpeed = Math.max(0, Math.min(25, Number(spd) || 0));
 
   const slider = document.getElementById('speedSlider');
   if (slider && Math.abs(Number(slider.value) - simSpeed) > 0.01) {
@@ -3415,15 +3915,21 @@ function setSimSpeed(spd) {
 
   const label = document.getElementById('speedValueLabel');
   if (label) {
-    label.innerText = `${simSpeed.toFixed(1)}x`;
+    if (simSpeed === 0) {
+      label.innerText = '0.0x (PAUSA)';
+    } else if (Math.abs(simSpeed - 1.0) < 0.05) {
+      label.innerText = '1.0x ZEN';
+    } else {
+      label.innerText = `${simSpeed.toFixed(1)}x`;
+    }
   }
 
   const speedButtons = [
     { id: 'btnSpeedPause', val: 0 },
     { id: 'btnSpeed1x', val: 1 },
-    { id: 'btnSpeed5x', val: 5 },
-    { id: 'btnSpeed15x', val: 15 },
-    { id: 'btnSpeed30x', val: 30 }
+    { id: 'btnSpeed4x', val: 4 },
+    { id: 'btnSpeed12x', val: 12 },
+    { id: 'btnSpeed25x', val: 25 }
   ];
 
   for (const btnCfg of speedButtons) {
@@ -3444,6 +3950,19 @@ function setSimSpeed(spd) {
 
 function updateTelemetryHUD(renderStats) {
   if (!bonsai) return;
+
+  const seasonInfo = getBonsaiSeasonInfo(bonsai);
+  updateSeasonBadge(seasonInfo);
+
+  const elYear = document.getElementById('hudYearBadge');
+  if (elYear) {
+    elYear.innerText = `AÑO ${seasonInfo.year}`;
+  }
+
+  const elMonth = document.getElementById('hudMonthBadge');
+  if (elMonth) {
+    elMonth.innerText = seasonInfo.monthName;
+  }
 
   let activeBuds = renderStats?.activeBudCount;
   let activeLeaves = renderStats?.activeLeafCount;
@@ -3495,22 +4014,36 @@ function updateTelemetryHUD(renderStats) {
   }
 
   if (elAge) {
-    const simDays = bonsai.simDays || 1;
-    const yearOffset = currentStartMode === 'SEEDLING_SHOOT' ? 0 : 3;
-    const yearNum = Math.floor(simDays / 90) + yearOffset;
-    const monthNames = [
-      '3月 (MAR)',
-      '4月 (ABR)',
-      '5月 (MAY)',
-      '6月 (JUN)',
-      '7月 (JUL)',
-      '8月 (AGO)',
-      '9月 (SEP)',
-      '10月 (OCT)'
-    ];
-    const mIdx = Math.floor((simDays % 90) / (90 / monthNames.length)) % monthNames.length;
-    elAge.innerText = `AÑO ${yearNum} // ${monthNames[mIdx]}`;
+    elAge.innerText = `AÑO ${seasonInfo.year} // ${seasonInfo.seasonIcon} ${seasonInfo.seasonName} (${seasonInfo.monthName})`;
   }
+}
+
+function advanceSeasonAction() {
+  if (!bonsai) return;
+  bonsaiAudio.playSeasonChime();
+
+  if (typeof bonsai.advanceSeason === 'function') {
+    bonsai.advanceSeason();
+  } else if (typeof bonsai.burstSpringFlush === 'function') {
+    bonsai.burstSpringFlush();
+  } else {
+    const currentDays = bonsai.simDays || 0;
+    const remainder = ((currentDays % 90) + 90) % 90;
+    const toNextBoundary = remainder < 5 ? 90 : 90 - remainder;
+    bonsai.stepBiology(toNextBoundary / 4.5);
+  }
+
+  if (autoFitFollow && typeof bonsai.getBoundingBox === 'function') {
+    cameraController.autoFit(
+      bonsai.getBoundingBox(),
+      window.innerWidth,
+      window.innerHeight,
+      false
+    );
+    updateZoomLabelUI(cameraController.targetZoom);
+  }
+
+  updateTelemetryHUD();
 }
 
 // 5. Wire Up DOM Event Listeners
@@ -3540,34 +4073,16 @@ function bindUIControls() {
   // Speed presets + Slider + Advance Season
   document.getElementById('btnSpeedPause')?.addEventListener('click', () => setSimSpeed(0));
   document.getElementById('btnSpeed1x')?.addEventListener('click', () => setSimSpeed(1));
-  document.getElementById('btnSpeed5x')?.addEventListener('click', () => setSimSpeed(5));
-  document.getElementById('btnSpeed15x')?.addEventListener('click', () => setSimSpeed(15));
-  document.getElementById('btnSpeed30x')?.addEventListener('click', () => setSimSpeed(30));
+  document.getElementById('btnSpeed4x')?.addEventListener('click', () => setSimSpeed(4));
+  document.getElementById('btnSpeed12x')?.addEventListener('click', () => setSimSpeed(12));
+  document.getElementById('btnSpeed25x')?.addEventListener('click', () => setSimSpeed(25));
 
   document.getElementById('speedSlider')?.addEventListener('input', (e) => {
-    setSimSpeed( parseFloat(e.target.value) );
+    setSimSpeed(parseFloat(e.target.value));
   });
 
-  document.getElementById('btnAdvanceSeason')?.addEventListener('click', () => {
-    if (!bonsai) return;
-    bonsaiAudio.playSeasonChime();
-    if (typeof bonsai.advanceSeason === 'function') {
-      bonsai.advanceSeason();
-    } else if (typeof bonsai.burstSpringFlush === 'function') {
-      bonsai.burstSpringFlush();
-    } else {
-      for (let i = 0; i < 45; i++) bonsai.stepBiology(0.05);
-    }
-    if (autoFitFollow && typeof bonsai.getBoundingBox === 'function') {
-      cameraController.autoFit(
-        bonsai.getBoundingBox(),
-        window.innerWidth,
-        window.innerHeight,
-        false
-      );
-      updateZoomLabelUI(cameraController.targetZoom);
-    }
-  });
+  document.getElementById('btnAdvanceSeason')?.addEventListener('click', advanceSeasonAction);
+  document.getElementById('btnHeaderAdvanceSeason')?.addEventListener('click', advanceSeasonAction);
 
   // Zoom & Framing Controls
   document.getElementById('btnZoomOut')?.addEventListener('click', () => {
@@ -3629,26 +4144,11 @@ function bindUIControls() {
     createSpecimen(currentSeed, currentSpecies, currentStartMode, true);
   });
 
-  // Species & Seed Controls
-  document.getElementById('speciesSelect')?.addEventListener('change', (e) => {
-    currentSpecies = e.target.value;
-    bonsaiAudio.playSeasonChime();
-    createSpecimen(currentSeed, currentSpecies, currentStartMode, true);
-  });
-
+  // Seed Mutation (Species is locked to Acer palmatum)
   document.getElementById('btnMutate')?.addEventListener('click', () => {
     currentSeed = Math.floor(Math.random() * 0xffffff) || 0x84a3f2;
     bonsaiAudio.playSeasonChime();
     createSpecimen(currentSeed, currentSpecies, currentStartMode, true);
-  });
-
-  document.getElementById('btnSeasonTheme')?.addEventListener('click', () => {
-    seasonTheme = seasonTheme === 'SPRING' ? 'AUTUMN' : 'SPRING';
-    const txtEl = document.getElementById('seasonThemeText');
-    if (txtEl) {
-      txtEl.innerText =
-        seasonTheme === 'AUTUMN' ? 'OTOÑO (MOMIJI)' : 'PRIMAVERA / VERANO';
-    }
   });
 
   window.addEventListener('resize', () => {
@@ -3674,7 +4174,7 @@ function animate(now) {
   lastTime = now;
 
   if (bonsai && simSpeed > 0) {
-    bonsai.stepBiology(dt * simSpeed);
+    bonsai.stepBiology(dt * simSpeed * ZEN_SPEED_SCALE);
 
     // When autoFitFollow is active and running at fast speed, gently keep growing tree framed
     autoFitTimer += dt * Math.min(6, simSpeed);
@@ -3705,7 +4205,22 @@ function animate(now) {
     asciiRenderer.setCellScale(currentZoom);
   }
 
-  const interactionState = pruningController.getInteractionState(seasonTheme);
+  const seasonInfo = getBonsaiSeasonInfo(bonsai);
+  const theme =
+    seasonInfo.seasonName === 'OTOÑO'
+      ? 'AUTUMN'
+      : seasonInfo.seasonName === 'INVIERNO'
+      ? 'WINTER'
+      : seasonInfo.seasonName === 'VERANO'
+      ? 'SUMMER'
+      : 'SPRING';
+
+  const interactionState = {
+    ...pruningController.getInteractionState(theme),
+    seasonInfo,
+    seasonTheme: theme
+  };
+
   const renderStats = asciiRenderer.syncBiology(
     bonsai,
     now * 0.001,

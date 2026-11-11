@@ -13,9 +13,8 @@ const container = document.getElementById('canvasContainer');
 const bonsaiAudio = new BonsaiAudioSynth();
 
 let currentSeed = 0x84A3F2;
-let currentSpecies = 'BONSAI_MAPLE';
+let currentSpecies = 'BONSAI_MAPLE'; // Strict focus on Acer palmatum (Arce Japonés // Yamamomiji)
 let currentStartMode = 'SEEDLING_SHOOT'; // 'SEEDLING_SHOOT' | 'TRAINED_TRUNK'
-let seasonTheme = 'SPRING'; // 'SPRING' | 'AUTUMN'
 let simSpeed = 1.0;
 let autoFitFollow = true; // Auto-frame when tree outgrows viewport at high speed
 
@@ -26,8 +25,9 @@ const cameraController = new CameraController(asciiRenderer.getCamera());
 // 2. Create Living Bonsai Organism
 let bonsai = null;
 
-function createSpecimen(seed, species, startMode, initialAutoFit = true) {
-  bonsai = new LivingBonsaiOrganism(seed, species, startMode);
+function createSpecimen(seed, species = 'BONSAI_MAPLE', startMode = 'SEEDLING_SHOOT', initialAutoFit = true) {
+  currentSpecies = 'BONSAI_MAPLE';
+  bonsai = new LivingBonsaiOrganism(seed, currentSpecies, startMode);
 
   if (startMode === 'SEEDLING_SHOOT') {
     // Advance slightly so the young shoot displays its first tender leaves & axillary leaf-buds
@@ -107,16 +107,8 @@ function updateSpecimenHeaderUI() {
 
   const headerEl = document.getElementById('specimenHeader');
   if (headerEl) {
-    const profile = SPECIES_PROFILES && SPECIES_PROFILES[currentSpecies];
-    const codeName = profile && profile.codeName
-      ? profile.codeName
-      : currentSpecies === 'BONSAI_ULMUS'
-      ? 'ULMUS_PARVIFOLIA'
-      : currentSpecies === 'BONSAI_PINE'
-      ? 'PINUS_THUNBERGII'
-      : 'ACER_PALMATUM';
     const idNum = (currentSeed % 900) + 100;
-    headerEl.innerText = `${codeName} #${idNum}`;
+    headerEl.innerText = `🍁 ACER_PALMATUM #${idNum}`;
   }
 
   const modeBadgeEl = document.getElementById('modeBadge');
@@ -128,8 +120,71 @@ function updateSpecimenHeaderUI() {
   }
 }
 
+/**
+ * Normalizes season and calendar info from the bonsai organism or internal phenological calendar.
+ */
+function getBonsaiSeasonInfo(bonsaiInstance) {
+  if (bonsaiInstance && typeof bonsaiInstance.getSeasonInfo === 'function') {
+    const info = bonsaiInstance.getSeasonInfo();
+    if (info && info.seasonName && info.seasonIcon) {
+      return info;
+    }
+  }
+
+  const simDays = bonsaiInstance?.simDays || 0;
+  const baseYear = currentStartMode === 'SEEDLING_SHOOT' ? 1 : 3;
+  const year = Math.max(1, Math.floor(simDays / 360) + baseYear);
+  const dayInYear = Math.floor(((simDays % 360) + 360) % 360);
+  const seasonIndex = Math.floor(dayInYear / 90) % 4; // 0: Spring, 1: Summer, 2: Autumn, 3: Winter
+
+  const seasonNames = ['PRIMAVERA', 'VERANO', 'OTOÑO', 'INVIERNO'];
+  const seasonIcons = ['🌸', '☀️', '🍁', '❄️'];
+  const monthNames = [
+    '3月 MAR', '4月 ABR', '5月 MAY',   // Spring (Days 0-89)
+    '6月 JUN', '7月 JUL', '8月 AGO',   // Summer (Days 90-179)
+    '9月 SEP', '10月 OCT', '11月 NOV', // Autumn (Days 180-269)
+    '12月 DIC', '1月 ENE', '2月 FEB'   // Winter (Days 270-359)
+  ];
+  const monthIndex = Math.floor(dayInYear / 30) % 12;
+  const progressInSeason = (dayInYear % 90) / 90;
+
+  return {
+    year,
+    seasonIndex,
+    seasonName: seasonNames[seasonIndex],
+    seasonIcon: seasonIcons[seasonIndex],
+    monthIndex,
+    monthName: monthNames[monthIndex],
+    dayInYear,
+    progressInSeason,
+    isWinter: seasonIndex === 3
+  };
+}
+
+/**
+ * Updates the visual styling and badge for the 4 seasons.
+ */
+function updateSeasonBadge(seasonInfo) {
+  const badgeEl = document.getElementById('hudSeasonBadge');
+  if (!badgeEl) return;
+
+  const name = seasonInfo.seasonName || 'PRIMAVERA';
+  const icon = seasonInfo.seasonIcon || '🌸';
+  badgeEl.innerText = `${icon} ${name}`;
+
+  if (name === 'PRIMAVERA') {
+    badgeEl.className = 'px-2 py-0.5 rounded font-bold bg-[#281523] border border-[#f472b6] text-[#f472b6] shadow-[0_0_8px_rgba(244,114,182,0.3)] transition-all duration-300';
+  } else if (name === 'VERANO') {
+    badgeEl.className = 'px-2 py-0.5 rounded font-bold bg-[#0c2415] border border-[#4ade80] text-[#4ade80] shadow-[0_0_8px_rgba(74,222,128,0.3)] transition-all duration-300';
+  } else if (name === 'OTOÑO') {
+    badgeEl.className = 'px-2 py-0.5 rounded font-bold bg-[#2a1306] border border-[#fb923c] text-[#fb923c] shadow-[0_0_8px_rgba(251,146,60,0.35)] transition-all duration-300';
+  } else if (name === 'INVIERNO') {
+    badgeEl.className = 'px-2 py-0.5 rounded font-bold bg-[#091e30] border border-[#38bdf8] text-[#38bdf8] shadow-[0_0_8px_rgba(56,189,248,0.3)] transition-all duration-300';
+  }
+}
+
 function setSimSpeed(spd) {
-  simSpeed = Math.max(0, Math.min(30, Number(spd) || 0));
+  simSpeed = Math.max(0, Math.min(25, Number(spd) || 0));
 
   const slider = document.getElementById('speedSlider');
   if (slider && Math.abs(Number(slider.value) - simSpeed) > 0.01) {
@@ -138,15 +193,21 @@ function setSimSpeed(spd) {
 
   const label = document.getElementById('speedValueLabel');
   if (label) {
-    label.innerText = `${simSpeed.toFixed(1)}x`;
+    if (simSpeed === 0) {
+      label.innerText = '0.0x (PAUSA)';
+    } else if (Math.abs(simSpeed - 1.0) < 0.05) {
+      label.innerText = '1.0x ZEN';
+    } else {
+      label.innerText = `${simSpeed.toFixed(1)}x`;
+    }
   }
 
   const speedButtons = [
     { id: 'btnSpeedPause', val: 0 },
     { id: 'btnSpeed1x', val: 1 },
-    { id: 'btnSpeed5x', val: 5 },
-    { id: 'btnSpeed15x', val: 15 },
-    { id: 'btnSpeed30x', val: 30 }
+    { id: 'btnSpeed4x', val: 4 },
+    { id: 'btnSpeed12x', val: 12 },
+    { id: 'btnSpeed25x', val: 25 }
   ];
 
   for (const btnCfg of speedButtons) {
@@ -167,6 +228,19 @@ function setSimSpeed(spd) {
 
 function updateTelemetryHUD(renderStats) {
   if (!bonsai) return;
+
+  const seasonInfo = getBonsaiSeasonInfo(bonsai);
+  updateSeasonBadge(seasonInfo);
+
+  const elYear = document.getElementById('hudYearBadge');
+  if (elYear) {
+    elYear.innerText = `AÑO ${seasonInfo.year}`;
+  }
+
+  const elMonth = document.getElementById('hudMonthBadge');
+  if (elMonth) {
+    elMonth.innerText = seasonInfo.monthName;
+  }
 
   let activeBuds = renderStats?.activeBudCount;
   let activeLeaves = renderStats?.activeLeafCount;
@@ -218,22 +292,36 @@ function updateTelemetryHUD(renderStats) {
   }
 
   if (elAge) {
-    const simDays = bonsai.simDays || 1;
-    const yearOffset = currentStartMode === 'SEEDLING_SHOOT' ? 0 : 3;
-    const yearNum = Math.floor(simDays / 90) + yearOffset;
-    const monthNames = [
-      '3月 (MAR)',
-      '4月 (ABR)',
-      '5月 (MAY)',
-      '6月 (JUN)',
-      '7月 (JUL)',
-      '8月 (AGO)',
-      '9月 (SEP)',
-      '10月 (OCT)'
-    ];
-    const mIdx = Math.floor((simDays % 90) / (90 / monthNames.length)) % monthNames.length;
-    elAge.innerText = `AÑO ${yearNum} // ${monthNames[mIdx]}`;
+    elAge.innerText = `AÑO ${seasonInfo.year} // ${seasonInfo.seasonIcon} ${seasonInfo.seasonName} (${seasonInfo.monthName})`;
   }
+}
+
+function advanceSeasonAction() {
+  if (!bonsai) return;
+  bonsaiAudio.playSeasonChime();
+
+  if (typeof bonsai.advanceSeason === 'function') {
+    bonsai.advanceSeason();
+  } else if (typeof bonsai.burstSpringFlush === 'function') {
+    bonsai.burstSpringFlush();
+  } else {
+    const currentDays = bonsai.simDays || 0;
+    const remainder = ((currentDays % 90) + 90) % 90;
+    const toNextBoundary = remainder < 5 ? 90 : 90 - remainder;
+    bonsai.stepBiology(toNextBoundary / 4.5);
+  }
+
+  if (autoFitFollow && typeof bonsai.getBoundingBox === 'function') {
+    cameraController.autoFit(
+      bonsai.getBoundingBox(),
+      window.innerWidth,
+      window.innerHeight,
+      false
+    );
+    updateZoomLabelUI(cameraController.targetZoom);
+  }
+
+  updateTelemetryHUD();
 }
 
 // 5. Wire Up DOM Event Listeners
@@ -263,34 +351,16 @@ function bindUIControls() {
   // Speed presets + Slider + Advance Season
   document.getElementById('btnSpeedPause')?.addEventListener('click', () => setSimSpeed(0));
   document.getElementById('btnSpeed1x')?.addEventListener('click', () => setSimSpeed(1));
-  document.getElementById('btnSpeed5x')?.addEventListener('click', () => setSimSpeed(5));
-  document.getElementById('btnSpeed15x')?.addEventListener('click', () => setSimSpeed(15));
-  document.getElementById('btnSpeed30x')?.addEventListener('click', () => setSimSpeed(30));
+  document.getElementById('btnSpeed4x')?.addEventListener('click', () => setSimSpeed(4));
+  document.getElementById('btnSpeed12x')?.addEventListener('click', () => setSimSpeed(12));
+  document.getElementById('btnSpeed25x')?.addEventListener('click', () => setSimSpeed(25));
 
   document.getElementById('speedSlider')?.addEventListener('input', (e) => {
-    setSimSpeed( parseFloat(e.target.value) );
+    setSimSpeed(parseFloat(e.target.value));
   });
 
-  document.getElementById('btnAdvanceSeason')?.addEventListener('click', () => {
-    if (!bonsai) return;
-    bonsaiAudio.playSeasonChime();
-    if (typeof bonsai.advanceSeason === 'function') {
-      bonsai.advanceSeason();
-    } else if (typeof bonsai.burstSpringFlush === 'function') {
-      bonsai.burstSpringFlush();
-    } else {
-      for (let i = 0; i < 45; i++) bonsai.stepBiology(0.05);
-    }
-    if (autoFitFollow && typeof bonsai.getBoundingBox === 'function') {
-      cameraController.autoFit(
-        bonsai.getBoundingBox(),
-        window.innerWidth,
-        window.innerHeight,
-        false
-      );
-      updateZoomLabelUI(cameraController.targetZoom);
-    }
-  });
+  document.getElementById('btnAdvanceSeason')?.addEventListener('click', advanceSeasonAction);
+  document.getElementById('btnHeaderAdvanceSeason')?.addEventListener('click', advanceSeasonAction);
 
   // Zoom & Framing Controls
   document.getElementById('btnZoomOut')?.addEventListener('click', () => {
@@ -352,26 +422,11 @@ function bindUIControls() {
     createSpecimen(currentSeed, currentSpecies, currentStartMode, true);
   });
 
-  // Species & Seed Controls
-  document.getElementById('speciesSelect')?.addEventListener('change', (e) => {
-    currentSpecies = e.target.value;
-    bonsaiAudio.playSeasonChime();
-    createSpecimen(currentSeed, currentSpecies, currentStartMode, true);
-  });
-
+  // Seed Mutation (Species is locked to Acer palmatum)
   document.getElementById('btnMutate')?.addEventListener('click', () => {
     currentSeed = Math.floor(Math.random() * 0xffffff) || 0x84a3f2;
     bonsaiAudio.playSeasonChime();
     createSpecimen(currentSeed, currentSpecies, currentStartMode, true);
-  });
-
-  document.getElementById('btnSeasonTheme')?.addEventListener('click', () => {
-    seasonTheme = seasonTheme === 'SPRING' ? 'AUTUMN' : 'SPRING';
-    const txtEl = document.getElementById('seasonThemeText');
-    if (txtEl) {
-      txtEl.innerText =
-        seasonTheme === 'AUTUMN' ? 'OTOÑO (MOMIJI)' : 'PRIMAVERA / VERANO';
-    }
   });
 
   window.addEventListener('resize', () => {
@@ -397,7 +452,7 @@ function animate(now) {
   lastTime = now;
 
   if (bonsai && simSpeed > 0) {
-    bonsai.stepBiology(dt * simSpeed);
+    bonsai.stepBiology(dt * simSpeed * ZEN_SPEED_SCALE);
 
     // When autoFitFollow is active and running at fast speed, gently keep growing tree framed
     autoFitTimer += dt * Math.min(6, simSpeed);
@@ -428,7 +483,22 @@ function animate(now) {
     asciiRenderer.setCellScale(currentZoom);
   }
 
-  const interactionState = pruningController.getInteractionState(seasonTheme);
+  const seasonInfo = getBonsaiSeasonInfo(bonsai);
+  const theme =
+    seasonInfo.seasonName === 'OTOÑO'
+      ? 'AUTUMN'
+      : seasonInfo.seasonName === 'INVIERNO'
+      ? 'WINTER'
+      : seasonInfo.seasonName === 'VERANO'
+      ? 'SUMMER'
+      : 'SPRING';
+
+  const interactionState = {
+    ...pruningController.getInteractionState(theme),
+    seasonInfo,
+    seasonTheme: theme
+  };
+
   const renderStats = asciiRenderer.syncBiology(
     bonsai,
     now * 0.001,

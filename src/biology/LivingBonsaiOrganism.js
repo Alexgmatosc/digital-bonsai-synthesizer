@@ -1,12 +1,19 @@
 import { createPRNG, SPECIES_PROFILES } from './SpeciesProfiles.js';
 
 /**
- * Causal & Fractal Biological Bonsai Engine
+ * Causal & Fractal Biological Bonsai Engine with 4-Season Annual Cycles
+ * Specifically tuned for Acer palmatum (Arce Japonés / Yamamomiji).
  *
- * Models the complete ontogenetic cycle:
- *   Axillary Leaf-Bud (AXILLARY_LEAF_BUD) -> Swelling Bud -> Herbaceous Green Shoot
- *   -> Node Formation (Leaves + New Axillary Leaf-Buds) -> Multi-Order Fractal Branching
- *   -> Leonardo's Pipe Model + Cambial Thickening + Leaf Abscission -> Woody Trunk.
+ * Annual Cyclical Ontogeny:
+ *   - Spring (Primavera, days 0-89): Winter chilling breaks endodormancy; cytokinin surges;
+ *     apical and opposite axillary buds break; vigorous shoot elongation; new tender palmate leaves.
+ *   - Summer (Verano, days 90-179): Full canopy maturation; high photosynthesis; Leonardo's Pipe Model
+ *     cambial thickening of trunk and branches; formation and maturation of overwintering buds.
+ *   - Autumn (Otoño, days 180-269): Growth elongation halts; shoots lignify and harden;
+ *     Momiji foliage senescence (scarlet, crimson, orange); trees prepare for winter.
+ *   - Winter (Invierno, days 270-359): Complete natural deciduous leaf abscission (100% bare wood);
+ *     winter bud scales at all nodes; cold dormancy.
+ *   - Year Rollover (Day 360 -> Year+1 Day 0): Chilling satisfies dormancy; cycle renews infinitely!
  */
 export class LivingBonsaiOrganism {
   constructor(seed = 0x84A3F2, species = 'BONSAI_MAPLE', startMode = 'SEEDLING_SHOOT') {
@@ -25,20 +32,54 @@ export class LivingBonsaiOrganism {
     this.fallingClips = [];
     this.undoStack = [];
 
-    this.simDays = 1;
+    // Time & Calendar
+    this.simDays = 0;
     this.nextId = 1;
-    this.lastFlushDay = 0;
+    this.lastSpringFlushYear = -1;
+    this.lastFlushDay = -999;
 
     if (this.startMode === 'TRAINED_TRUNK') {
       this.initTrainedTrunkAndDormantBuds();
       // Pre-grow initial spring canopy flush so trained pre-bonsai starts with lush shoots
-      for (let i = 0; i < 65; i++) {
-        this.stepBiology(0.05);
-      }
+      this.stepBiology(20.0);
       this.undoStack = [];
     } else {
       this.initSeedlingShoot();
     }
+  }
+
+  /**
+   * Calendar & 4-Season Astronomical State.
+   * Exposes `{ year, seasonIndex (0..3), seasonName, monthName, seasonProgress (0..1), dayOfYear }`.
+   */
+  getSeasonInfo() {
+    const totalDays = Math.max(0, Math.round(this.simDays * 1000) / 1000);
+    const dayOfYear = totalDays % 360;
+    const baseYear = this.startMode === 'SEEDLING_SHOOT' ? 1 : 4;
+    const year = baseYear + Math.floor(totalDays / 360);
+    const seasonIndex = Math.min(3, Math.floor(dayOfYear / 90)); // 0: Spring, 1: Summer, 2: Autumn, 3: Winter
+    const seasonNames = ['PRIMAVERA', 'VERANO', 'OTOÑO', 'INVIERNO'];
+    const seasonName = seasonNames[seasonIndex];
+    const seasonProgress = (dayOfYear % 90) / 90.0;
+
+    // 12 months: 30 days per month
+    const monthNames = [
+      '3月 MAR', '4月 ABR', '5月 MAY',
+      '6月 JUN', '7月 JUL', '8月 AGO',
+      '9月 SEP', '10月 OCT', '11月 NOV',
+      '12月 DIC', '1月 ENE', '2月 FEB'
+    ];
+    const mIdx = Math.min(11, Math.floor(dayOfYear / 30));
+    const monthName = monthNames[mIdx];
+
+    return {
+      year,
+      seasonIndex,
+      seasonName,
+      monthName,
+      seasonProgress,
+      dayOfYear
+    };
   }
 
   /**
@@ -114,7 +155,7 @@ export class LivingBonsaiOrganism {
 
   /**
    * Mode A: 'SEEDLING_SHOOT'
-   * Starts as a single young tender green shoot (r0 = 1.4, r1 = 1.1, woodiness = 0.0,
+   * Starts as a young tender green shoot (r0 = 1.4, r1 = 1.1, woodiness = 0.0,
    * generation = 0, remainingInternodes = 4) emerging from the moss mound (y0 = -2 to y1 = 26).
    */
   initSeedlingShoot() {
@@ -125,7 +166,9 @@ export class LivingBonsaiOrganism {
     this.leaves = [];
     this.fallingClips = [];
     this.undoStack = [];
-    this.simDays = 1;
+    this.simDays = 0;
+    this.lastSpringFlushYear = 1;
+    this.lastFlushDay = 0;
 
     const initialR0 = 1.4;
     const initialR1 = 1.1;
@@ -150,7 +193,7 @@ export class LivingBonsaiOrganism {
       woodiness: 0.0,
       generation: 0,
       internodeIdx: 0,
-      curT: 0.35,
+      curT: 0.85, // Emerging shoot, forms its first node pair within day 1
       dirAngle: leanAngle,
       dirZ: (rng() - 0.5) * 0.15,
       remainingInternodes: 4,
@@ -197,7 +240,9 @@ export class LivingBonsaiOrganism {
     this.leaves = [];
     this.fallingClips = [];
     this.undoStack = [];
-    this.simDays = 1;
+    this.simDays = 0;
+    this.lastSpringFlushYear = 4;
+    this.lastFlushDay = 0;
 
     const baseRadius = 22.0 + rng() * 4.0;
     this._initSoilAndNebari(baseRadius);
@@ -339,13 +384,13 @@ export class LivingBonsaiOrganism {
   }
 
   /**
-   * Main Causal Biological Simulation Tick with internal sub-stepping (maxStep = 0.05)
-   * so turbo 30x speed is rock-solid and deterministic.
+   * Main Causal Biological Simulation Tick with sub-stepping.
+   * Rock-solid at all speeds (1x, 4x, 12x, 25x, 30x).
    */
   stepBiology(dt) {
     if (!dt || dt <= 0) return;
-    const maxStep = 0.05;
-    let remaining = Math.min(dt, 12.0);
+    const maxStep = dt > 2.0 ? 0.25 : 0.05;
+    let remaining = Math.min(dt, 95.0);
     while (remaining > 1e-6) {
       const subDt = Math.min(maxStep, remaining);
       this._stepSubBiology(subDt);
@@ -356,9 +401,28 @@ export class LivingBonsaiOrganism {
   _stepSubBiology(dt) {
     const rng = this.rng;
     const profile = this.profile;
-    this.simDays += dt * 4.5;
 
-    // 1. Reset hormones and count active segments
+    // Calibrated 1x Time Pace:
+    // 1 real second at 1x speed = 0.95 simulation days (~1.05s per day).
+    // A 90-day season takes ~95 seconds at 1x, or accelerates smoothly with 4x/12x/25x or advanceSeason().
+    const dayRate = 0.95;
+    const dayStep = dt * dayRate;
+    this.simDays += dayStep;
+
+    const seasonInfo = this.getSeasonInfo();
+    const { year, seasonIndex, dayOfYear } = seasonInfo;
+
+    // ---------------------------------------------------------
+    // 1. Year Rollover & Annual Spring Awakening (Day 360 -> Year+1 Day 0)
+    // ---------------------------------------------------------
+    if (seasonIndex === 0 && this.lastSpringFlushYear !== year) {
+      this.lastSpringFlushYear = year;
+      this._triggerSpringAwakening(year);
+    }
+
+    // ---------------------------------------------------------
+    // 2. Hormones: Basipetal Auxin & Acropetal Root Cytokinin
+    // ---------------------------------------------------------
     let activeSegCount = 0;
     for (const seg of this.segments) {
       seg.auxin = 0;
@@ -368,50 +432,49 @@ export class LivingBonsaiOrganism {
       }
     }
 
-    // 2. Basipetal Auxin (A) downward from active elongating segments (curT < 1) & swelling buds
     let activeMeristemCount = 0;
-    for (const seg of this.segments) {
-      if (seg.pruned) continue;
-      if (seg.curT < 1.0) {
-        activeMeristemCount++;
-        this.propagateAuxinDown(seg.id, 0.95);
+    // Auxin downward from actively elongating shoots and swelling buds
+    if (seasonIndex !== 3) {
+      for (const seg of this.segments) {
+        if (seg.pruned) continue;
+        if (seg.curT < 1.0) {
+          activeMeristemCount++;
+          this.propagateAuxinDown(seg.id, 0.92);
+        }
       }
-    }
-    for (const bud of this.buds) {
-      if (bud.pruned || bud.state === 'SPENT') continue;
-      if (bud.state === 'SWELLING') {
-        activeMeristemCount++;
-        // Propagate auxin below the bud's parent segment so twin opposite buds on the SAME node don't inhibit each other
-        const pSeg = this.SegmentMap.get(bud.parentSegId);
-        if (pSeg && pSeg.parentId) {
-          this.propagateAuxinDown(pSeg.parentId, 0.55);
+      for (const bud of this.buds) {
+        if (bud.pruned || bud.state === 'SPENT') continue;
+        if (bud.state === 'SWELLING') {
+          activeMeristemCount++;
+          const pSeg = this.SegmentMap.get(bud.parentSegId);
+          if (pSeg && pSeg.parentId) {
+            this.propagateAuxinDown(pSeg.parentId, 0.50);
+          }
         }
       }
     }
 
-    // 3. Acropetal Cytokinin (C) / Root Sap Vigor upward & Bud Dormancy Release
+    // Acropetal Cytokinin / Root Sap Vigor
     const baseSeg = this.segments[0];
-    const rootVigor = baseSeg ? Math.min(2.6, 0.75 + baseSeg.r0 * 0.07) : 1.0;
-
-    // Periodic seasonal flush pulse so a seedling continuously develops 4-6 fractal branching orders
-    const isFlushWindow = (this.simDays - this.lastFlushDay) >= 18.0;
-    const seasonalPulse = isFlushWindow ? 0.55 : 0.0;
+    const rootVigor = baseSeg ? Math.min(3.2, 0.85 + baseSeg.r0 * 0.08) : 1.0;
+    const seasonCytokininBonus = seasonIndex === 0 ? 0.75 : seasonIndex === 1 ? 0.35 : 0.0;
 
     for (const seg of this.segments) {
       if (seg.pruned) continue;
-      const distPenalty = Math.pow(0.92, seg.generation);
-      const chopBoost = seg.hasChopScar ? 0.85 : 0.0;
+      const distPenalty = Math.pow(0.93, seg.generation);
+      const chopBoost = seg.hasChopScar ? 0.95 : 0.0;
       const terminalBoost = seg.childrenIds.length === 0 ? 0.35 : 0.15;
-      seg.cytokinin = rootVigor * distPenalty + chopBoost + terminalBoost + seasonalPulse;
+      seg.cytokinin = rootVigor * distPenalty + chopBoost + terminalBoost + seasonCytokininBonus;
     }
 
-    // Dynamic target active meristems: scales with tree development up to canopy cap
-    const maxCanopySegments = 220;
-    const desiredMeristems = activeSegCount >= maxCanopySegments
-      ? 0
-      : Math.min(10, Math.max(4, 3 + Math.floor(activeSegCount / 8)));
+    // ---------------------------------------------------------
+    // 3. Intra-Season Bud Breaking (Spring & early Summer flush)
+    // ---------------------------------------------------------
+    const isFlushWindow = (this.simDays - this.lastFlushDay) >= 16.0;
+    const desiredMeristems = Math.min(24, Math.max(4, 3 + Math.floor(activeSegCount / 7)));
 
-    if (activeSegCount < maxCanopySegments && (activeMeristemCount < desiredMeristems || isFlushWindow)) {
+    if ((seasonIndex === 0 || (seasonIndex === 1 && dayOfYear < 125)) &&
+        (activeMeristemCount < desiredMeristems || isFlushWindow)) {
       if (isFlushWindow) {
         this.lastFlushDay = this.simDays;
       }
@@ -419,34 +482,30 @@ export class LivingBonsaiOrganism {
       const candidates = [];
       for (const b of this.buds) {
         if (b.pruned || b.state !== 'DORMANT') continue;
-        // Cap automatic branching at generation 5 so tree stays refined
-        if (b.generation > 5) continue;
         const pSeg = this.SegmentMap.get(b.parentSegId);
-        if (!pSeg || pSeg.pruned || pSeg.curT < 0.95) continue;
+        if (!pSeg || pSeg.pruned || pSeg.curT < 0.92) continue;
 
-        // Hormone ratio C / (1 + beta * A)
         const hormoneRatio = pSeg.cytokinin / (1.0 + 1.8 * pSeg.auxin);
-        const threshold = b.type === 'AXILLARY_LEAF_BUD' ? 0.42 : 0.52;
-        if (hormoneRatio >= threshold || pSeg.auxin < 0.38) {
+        const threshold = b.type === 'AXILLARY_LEAF_BUD' ? 0.40 : 0.50;
+        if (hormoneRatio >= threshold || pSeg.auxin < 0.35) {
           candidates.push({ bud: b, pSeg, hormoneRatio });
         }
       }
 
       if (candidates.length > 0) {
-        // Prioritize axillary leaf-buds across developing generations + chopped stubs
         candidates.sort((a, b) => {
           const scoreA =
             (a.pSeg.hasChopScar ? 3.5 : 0) +
-            (a.bud.type === 'AXILLARY_LEAF_BUD' ? 1.5 : 0.4) +
-            a.bud.generation * 0.45 +
+            (a.bud.type === 'AXILLARY_LEAF_BUD' ? 1.5 : 0.5) +
+            a.bud.generation * 0.35 +
             a.hormoneRatio * 0.8 +
-            rng() * 0.45;
+            rng() * 0.4;
           const scoreB =
             (b.pSeg.hasChopScar ? 3.5 : 0) +
-            (b.bud.type === 'AXILLARY_LEAF_BUD' ? 1.5 : 0.4) +
-            b.bud.generation * 0.45 +
+            (b.bud.type === 'AXILLARY_LEAF_BUD' ? 1.5 : 0.5) +
+            b.bud.generation * 0.35 +
             b.hormoneRatio * 0.8 +
-            rng() * 0.45;
+            rng() * 0.4;
           return scoreB - scoreA;
         });
 
@@ -457,13 +516,12 @@ export class LivingBonsaiOrganism {
           picked.state = 'SWELLING';
           picked.swell = Math.max(picked.swell, 0.25);
 
-          // For opposite decussate species (Maple), often wake the opposite twin bud on the same node
-          // so natural dichotomous Y-branching emerges organically!
-          if (profile.phyllotaxy === 'OPPOSITE_DECUSSATE' && activeSegCount < maxCanopySegments - 10) {
+          // For Acer palmatum, wake opposite twin bud on the same node for authentic Y-dichotomy
+          if (profile.phyllotaxy === 'OPPOSITE_DECUSSATE') {
             for (const twinId of candidates[i].pSeg.nodeBudIds) {
               if (twinId === picked.id) continue;
               const twin = this.buds.find(x => x.id === twinId);
-              if (twin && !twin.pruned && twin.state === 'DORMANT' && rng() < 0.72) {
+              if (twin && !twin.pruned && twin.state === 'DORMANT' && rng() < 0.78) {
                 twin.state = 'SWELLING';
                 twin.swell = Math.max(twin.swell, 0.22);
               }
@@ -473,7 +531,9 @@ export class LivingBonsaiOrganism {
       }
     }
 
-    // 4. Anchor Buds to Parent Node/Axil & Advance Swelling Buds -> Sprout New Internode Shoots!
+    // ---------------------------------------------------------
+    // 4. Bud Progression: Swelling -> Sprout New Internode Shoots
+    // ---------------------------------------------------------
     for (const bud of this.buds) {
       if (bud.pruned) continue;
       const pSeg = this.SegmentMap.get(bud.parentSegId);
@@ -482,7 +542,7 @@ export class LivingBonsaiOrganism {
         continue;
       }
 
-      // Keep bud (x, y, z) anchored to parent node/axil as parent elongates or thickens
+      // Anchor bud (x, y, z) to parent node/axil
       const pCurX1 = pSeg.x0 + (pSeg.x1 - pSeg.x0) * pSeg.curT;
       const pCurY1 = pSeg.y0 + (pSeg.y1 - pSeg.y0) * pSeg.curT;
       const pCurZ1 = pSeg.z0 + (pSeg.z1 - pSeg.z0) * pSeg.curT;
@@ -497,8 +557,9 @@ export class LivingBonsaiOrganism {
       bud.y = axY + Math.cos(bud.dirAngle) * 1.1;
       bud.z = axZ + (bud.side || 0) * 1.5;
 
-      if (bud.state === 'SWELLING' && pSeg.curT >= 0.95) {
-        bud.swell += dt * 1.05;
+      // Swelling advances in Spring and early Summer (hibernates in Winter)
+      if (seasonIndex !== 3 && bud.state === 'SWELLING' && pSeg.curT >= 0.95) {
+        bud.swell += dayStep * 0.16;
         if (bud.swell >= 1.0) {
           bud.state = 'SPENT';
           this.sproutInternodeFromBud(bud, pSeg);
@@ -506,7 +567,9 @@ export class LivingBonsaiOrganism {
       }
     }
 
-    // 5. Elongate Active Internode Shoots & Form Species-Specific Nodes (Leaves + Axillary Leaf-Buds)
+    // ---------------------------------------------------------
+    // 5. Shoot Elongation & Node Formation (Leaves + Buds)
+    // ---------------------------------------------------------
     for (const seg of this.segments) {
       if (seg.pruned) continue;
 
@@ -537,65 +600,183 @@ export class LivingBonsaiOrganism {
       }
 
       if (seg.curT < 1.0) {
-        seg.curT = Math.min(1.0, seg.curT + dt * 0.95);
-        if (seg.curT >= 1.0 && !seg.hasNodeFormed) {
-          seg.hasNodeFormed = true;
-          this.formNodeAtTip(seg);
+        // Growth is active in Spring and early Summer; halts in late Autumn and Winter
+        if (seasonIndex === 0 || (seasonIndex === 1 && dayOfYear < 140)) {
+          const speed = seasonIndex === 0 ? 0.11 : 0.08;
+          seg.curT = Math.min(1.0, seg.curT + dayStep * speed);
+          if (seg.curT >= 1.0 && !seg.hasNodeFormed) {
+            seg.hasNodeFormed = true;
+            this.formNodeAtTip(seg);
+          }
         }
       }
     }
 
-    // 6. Leaf Maturation, Anchor Update & Leaf Abscission on Lignified Wood (woodiness > 0.62)
-    for (const lf of this.leaves) {
-      if (lf.pruned) continue;
-      const pSeg = this.SegmentMap.get(lf.parentSegId);
-      if (!pSeg || pSeg.pruned) {
-        lf.pruned = true;
-        continue;
+    // ---------------------------------------------------------
+    // 6. Annual Leaves: Maturation, Senescence, or Winter Abscission
+    // ---------------------------------------------------------
+    if (seasonIndex === 3) {
+      // INVIERNO (Winter, days 270-359): Complete deciduous leaf abscission!
+      // All remaining leaves detach and fall; the tree is completely bare deciduous wood.
+      for (const lf of this.leaves) {
+        if (!lf.pruned) {
+          lf.pruned = true;
+          lf.abscised = true;
+          this.fallingClips.push({
+            x: lf.x,
+            y: lf.y,
+            z: lf.z,
+            vx: (rng() - 0.5) * 1.2,
+            vy: -0.35,
+            r: lf.maxRadius * 0.45,
+            alpha: 1.0
+          });
+        }
       }
+    } else {
+      // PRIMAVERA, VERANO, OTOÑO: Leaves expand, mature, and photosynthesize
+      for (const lf of this.leaves) {
+        if (lf.pruned) continue;
+        const pSeg = this.SegmentMap.get(lf.parentSegId);
+        if (!pSeg || pSeg.pruned) {
+          lf.pruned = true;
+          continue;
+        }
 
-      const pCurX1 = pSeg.x0 + (pSeg.x1 - pSeg.x0) * pSeg.curT;
-      const pCurY1 = pSeg.y0 + (pSeg.y1 - pSeg.y0) * pSeg.curT;
-      const pCurZ1 = pSeg.z0 + (pSeg.z1 - pSeg.z0) * pSeg.curT;
-      lf.x = pSeg.x0 + (pCurX1 - pSeg.x0) * lf.attachT;
-      lf.y = pSeg.y0 + (pCurY1 - pSeg.y0) * lf.attachT;
-      lf.z = pSeg.z0 + (pCurZ1 - pSeg.z0) * lf.attachT;
+        const pCurX1 = pSeg.x0 + (pSeg.x1 - pSeg.x0) * pSeg.curT;
+        const pCurY1 = pSeg.y0 + (pSeg.y1 - pSeg.y0) * pSeg.curT;
+        const pCurZ1 = pSeg.z0 + (pSeg.z1 - pSeg.z0) * pSeg.curT;
+        lf.x = pSeg.x0 + (pCurX1 - pSeg.x0) * lf.attachT;
+        lf.y = pSeg.y0 + (pCurY1 - pSeg.y0) * lf.attachT;
+        lf.z = pSeg.z0 + (pCurZ1 - pSeg.z0) * lf.attachT;
 
-      if (lf.age < 1.0) {
-        lf.age = Math.min(1.0, lf.age + dt * 0.42);
-      }
+        if (lf.age < 1.0) {
+          lf.age = Math.min(1.0, lf.age + dayStep * 0.055);
+        }
 
-      // Abscission of old nodal leaves once supporting stem has lignified into woody branch/trunk
-      if (pSeg.woodiness > profile.abscissionWoodiness && lf.age >= 1.0) {
-        lf.pruned = true;
-        lf.abscised = true;
-        this.fallingClips.push({
-          x: lf.x,
-          y: lf.y,
-          z: lf.z,
-          vx: (rng() - 0.5) * 1.2,
-          vy: -0.35,
-          r: lf.maxRadius * 0.45,
-          alpha: 1.0
-        });
+        // Natural abscission of old nodal leaves once supporting stem has lignified into heavy wood
+        if (pSeg.woodiness > profile.abscissionWoodiness && lf.age >= 1.0) {
+          lf.pruned = true;
+          lf.abscised = true;
+          this.fallingClips.push({
+            x: lf.x,
+            y: lf.y,
+            z: lf.z,
+            vx: (rng() - 0.5) * 1.2,
+            vy: -0.35,
+            r: lf.maxRadius * 0.45,
+            alpha: 1.0
+          });
+        }
       }
     }
 
-    // 7. Leonardo's Pipe Model + Irreversible Cambial Thickening (bottom-up from tips to basal trunk)
-    this._applyPipeModelAndCambialGrowth(dt);
+    // ---------------------------------------------------------
+    // 7. Leonardo's Pipe Model + Cambial Secondary Thickening
+    // ---------------------------------------------------------
+    this._applyPipeModelAndCambialGrowth(dayStep, seasonIndex);
 
-    // 8. Scale Nebari roots proportionally to basal trunk radius
+    // ---------------------------------------------------------
+    // 8. Scale Nebari Surface Roots with Basal Trunk
+    // ---------------------------------------------------------
     this._updateNebariFromTrunk();
   }
 
   /**
-   * Bottom-up Leonardo Pipe Model (R_target^alpha = sum R_child^alpha + sum r_leaf^alpha)
-   * combined with irreversible cambial ring deposition and strict acropetal taper (r_base > r_mid > r_tip).
+   * Annual Spring Awakening: Triggered at Year Rollover (Day 360 -> Year+1 Day 0).
+   * Winter chilling satisfies endodormancy; auxin is cleared, cytokinin surges,
+   * and terminal & opposite decussate buds across the crown break into fresh shoots!
    */
-  _applyPipeModelAndCambialGrowth(dt) {
+  _triggerSpringAwakening(year) {
+    const rng = this.rng;
+    const profile = this.profile;
+
+    // 1. Chilling satisfaction: Auxin zeroed, root cytokinin surges
+    for (const seg of this.segments) {
+      if (!seg.pruned) {
+        seg.auxin = 0;
+        seg.cytokinin = 2.5 + rng() * 0.8;
+      }
+    }
+
+    // 2. Score dormant buds across the canopy
+    const dormantBuds = this.buds.filter(b => !b.pruned && b.state === 'DORMANT');
+    if (dormantBuds.length === 0) return;
+
+    const scoredBuds = [];
+    for (const b of dormantBuds) {
+      const pSeg = this.SegmentMap.get(b.parentSegId);
+      if (!pSeg || pSeg.pruned) continue;
+
+      const isTerminalShoot = pSeg.childrenIds.length === 0;
+      const isAxillary = b.type === 'AXILLARY_LEAF_BUD';
+      const isCollar = b.type === 'COLLAR_ACTIVE' || b.type === 'LATENT_TRUNK';
+      const heightBonus = Math.max(0, b.y * 0.03);
+
+      let score = rng() * 1.5;
+      if (isTerminalShoot) score += 4.5;
+      if (isAxillary) score += 2.8;
+      if (pSeg.hasChopScar) score += 3.5;
+      if (isCollar && year <= 2) score += 2.0;
+      score += Math.min(3.0, b.generation * 0.6);
+      score += heightBonus;
+
+      scoredBuds.push({ bud: b, pSeg, score });
+    }
+
+    scoredBuds.sort((a, b) => b.score - a.score);
+
+    // Natural bud break quota that scales with tree maturity without artificial hard limits
+    const baseTrunk = this.segments[0];
+    const trunkCaliberFactor = baseTrunk ? baseTrunk.r0 * 0.5 : 2;
+    const targetWakeCount = Math.min(
+      36,
+      Math.max(4, Math.floor(4 + year * 3.5 + trunkCaliberFactor))
+    );
+
+    const wokeBudIds = new Set();
+    const toWake = Math.min(scoredBuds.length, targetWakeCount);
+
+    for (let i = 0; i < toWake; i++) {
+      const { bud, pSeg } = scoredBuds[i];
+      if (wokeBudIds.has(bud.id)) continue;
+
+      bud.state = 'SWELLING';
+      bud.swell = 0.25 + rng() * 0.25;
+      wokeBudIds.add(bud.id);
+
+      // In Acer palmatum (opposite decussate), wake the opposite twin bud on the same node
+      // to produce the quintessential Japanese Maple dichotomous Y-fork!
+      if (profile.phyllotaxy === 'OPPOSITE_DECUSSATE') {
+        for (const twinId of pSeg.nodeBudIds) {
+          if (twinId === bud.id || wokeBudIds.has(twinId)) continue;
+          const twin = this.buds.find(x => x.id === twinId);
+          if (twin && !twin.pruned && twin.state === 'DORMANT' && rng() < 0.85) {
+            twin.state = 'SWELLING';
+            twin.swell = 0.22 + rng() * 0.22;
+            wokeBudIds.add(twin.id);
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Bottom-up Leonardo Pipe Model (R_target^alpha = sum R_child^alpha + sum r_leaf^alpha)
+   * combined with irreversible cambial secondary xylem ring deposition and strict acropetal taper.
+   */
+  _applyPipeModelAndCambialGrowth(dayStep, seasonIndex) {
     const profile = this.profile;
     const alpha = profile.pipeAlpha;
     const invAlpha = 1.0 / alpha;
+
+    // Seasonal cambium activity factor:
+    // Spring: 0.90 (leaf expansion, active sap flow)
+    // Summer: 1.50 (peak photosynthesis & secondary xylem ring deposition!)
+    // Autumn: 0.55 (lignification & hardening, cambial winding down)
+    // Winter: 0.00 (cambial winter dormancy)
+    const seasonCambiumFactor =
+      seasonIndex === 0 ? 0.90 : seasonIndex === 1 ? 1.50 : seasonIndex === 2 ? 0.55 : 0.0;
 
     // Pre-accumulate leaf vascular demand and photosynthetic sugar production per segment
     const leafPipeMap = new Map();
@@ -658,16 +839,24 @@ export class LivingBonsaiOrganism {
             ? 1.05
             : Math.pow(0.76, seg.generation - 1);
 
-      const cambiumDelta =
-        dt * profile.cambiumRate * Math.pow(Math.max(0.12, seg.phloemFlux), 0.65) * genBoost;
-      const pipeDelta =
-        pipeTargetR0 > seg.r0 ? dt * 2.4 * (pipeTargetR0 - seg.r0) : 0;
+      // Total cambial demand combining Pipe Model target and phloem flux
+      const cambiumFluxTerm =
+        profile.cambiumRate * 0.06 * Math.pow(Math.max(0.12, seg.phloemFlux), 0.55) * genBoost;
+      const pipeFluxTerm =
+        pipeTargetR0 > seg.r0
+          ? profile.cambiumRate * 0.08 * Math.min(6.0, pipeTargetR0 - seg.r0)
+          : 0;
+      const annualRingRate = (cambiumFluxTerm + pipeFluxTerm) * seasonCambiumFactor;
+      const cambiumDelta = Math.min(
+        dayStep * 0.018 * (isRootBase ? 1.4 : 1.0),
+        dayStep * annualRingRate
+      );
 
-      seg.r0 = Math.min(maxR, seg.r0 + pipeDelta + cambiumDelta);
+      seg.r0 = Math.min(maxR, seg.r0 + cambiumDelta);
 
       if (activeChildCount > 0) {
         const minR1FromChild = maxChildR0 * 1.03;
-        const targetR1 = Math.max(seg.r1 + (pipeDelta + cambiumDelta) * 0.80, minR1FromChild);
+        const targetR1 = Math.max(seg.r1 + cambiumDelta * 0.80, minR1FromChild);
         seg.r1 = Math.min(seg.r0 * 0.93, targetR1);
         seg.r0 = Math.min(maxR, Math.max(seg.r0, seg.r1 * 1.06, pipeTargetR0 * 0.94));
       } else {
@@ -676,7 +865,13 @@ export class LivingBonsaiOrganism {
 
       // Progressive lignification (0.0 herbaceous shoot -> 1.0 mature fissured bark)
       if (seg.type === 'INTERNODE' && seg.curT >= 0.95) {
-        const fluxLignin = dt * profile.lignificationRate * (0.30 + 0.25 * Math.min(2.5, seg.phloemFlux * 0.2));
+        const seasonLigninFactor = seasonIndex === 2 ? 1.6 : seasonIndex === 1 ? 1.0 : 0.6;
+        const fluxLignin =
+          dayStep *
+          profile.lignificationRate *
+          0.025 *
+          seasonLigninFactor *
+          (0.30 + 0.25 * Math.min(2.5, seg.phloemFlux * 0.2));
         const radialLignin = Math.max(0, (seg.r0 - 1.4) / 4.8);
         seg.woodiness = Math.min(1.0, Math.max(seg.woodiness + fluxLignin, radialLignin));
       }
@@ -767,7 +962,7 @@ export class LivingBonsaiOrganism {
 
   /**
    * Called when an internode reaches full length (curT == 1.0).
-   * Spawns leaves and AXILLARY_LEAF_BUDs according to species phyllotaxy,
+   * Spawns leaves and AXILLARY_LEAF_BUDs according to species phyllotaxy (opposite decussate for Acer palmatum),
    * and continues apical elongation if remainingInternodes > 0.
    */
   formNodeAtTip(seg) {
@@ -778,12 +973,14 @@ export class LivingBonsaiOrganism {
 
     let nodeSides = [-1, 1];
     if (profile.phyllotaxy === 'ALTERNATE_ZIGZAG') {
-      // Alternate distichous phyllotaxy: 1 leaf + 1 alternating axillary leaf-bud per node
       const altSide = (seg.internodeIdx + seg.generation) % 2 === 0 ? 1 : -1;
       nodeSides = [altSide];
     } else if (profile.phyllotaxy === 'WHORLED_CANDLE') {
       nodeSides = isTerminal ? [-1, 0, 1] : [-1, 1];
     }
+
+    // Opposite decussate 3D rotation at alternating nodes
+    const nodeZTilt = profile.phyllotaxy === 'OPPOSITE_DECUSSATE' && seg.internodeIdx % 2 === 1 ? 0.38 : 0.0;
 
     for (const side of nodeSides) {
       const effectiveSide = side === 0 ? (rng() > 0.5 ? 1 : -1) : side;
@@ -794,7 +991,7 @@ export class LivingBonsaiOrganism {
           ? seg.dirAngle + (rng() - 0.5) * 0.22
           : seg.dirAngle + side * spreadAng;
 
-      // Spawn leaf at node (for pine whorl center bud, pair with needle cluster too)
+      // Spawn leaf at node
       let leafId = null;
       if (side !== 0 || profile.phyllotaxy !== 'WHORLED_CANDLE') {
         const leafAngle =
@@ -812,7 +1009,7 @@ export class LivingBonsaiOrganism {
           z: seg.z1,
           side: effectiveSide,
           angle: leafAngle,
-          tiltZ: effectiveSide * 0.25 + (rng() - 0.5) * 0.3,
+          tiltZ: effectiveSide * 0.25 + (rng() - 0.5) * 0.25 + (effectiveSide * nodeZTilt),
           maxRadius: (isTerminal ? 18 + rng() * 6 : 24 + rng() * 8) * ramScale,
           petioleLen: (isTerminal ? 9 + rng() * 4 : 13 + rng() * 5) * ramScale,
           age: 0.05,
@@ -837,7 +1034,7 @@ export class LivingBonsaiOrganism {
         y: seg.y1 + Math.cos(budAngle) * 1.1,
         z: seg.z1 + effectiveSide * 1.5,
         dirAngle: budAngle,
-        dirZ: seg.dirZ + (rng() - 0.5) * 0.32,
+        dirZ: seg.dirZ + (rng() - 0.5) * 0.32 + (effectiveSide * nodeZTilt),
         generation: seg.generation + 1,
         remainingInternodes: seg.generation === 0 ? 3 : 2 + (rng() > 0.55 ? 1 : 0),
         hasWire: false,
@@ -852,7 +1049,6 @@ export class LivingBonsaiOrganism {
       const contraction = Math.pow(profile.internodeContraction, Math.max(0, seg.generation));
       const nextLen = (profile.baseInternodeLen + rng() * profile.internodeLenVar) * contraction;
 
-      // In Ulmus (ALTERNATE_ZIGZAG), deflect stem in opposite direction of the alternating leaf (±14°)
       let deflection = (rng() - 0.5) * 0.16;
       if (profile.phyllotaxy === 'ALTERNATE_ZIGZAG') {
         const altSide = (seg.internodeIdx + seg.generation) % 2 === 0 ? 1 : -1;
@@ -896,7 +1092,6 @@ export class LivingBonsaiOrganism {
   pruneSegment(segId) {
     const seg = this.SegmentMap.get(segId);
     if (!seg || seg.pruned) return false;
-    // Allow pruning any segment except the root base segments[0]
     if (this.segments[0] && seg.id === this.segments[0].id) return false;
     if (!seg.parentId) return false;
 
@@ -958,7 +1153,7 @@ export class LivingBonsaiOrganism {
         }
       }
 
-      // 2. Also check parent's parent if parentSeg had fewer than 2 dormant buds
+      // 2. Also check grandparent if parentSeg had fewer than 2 dormant buds
       if (wokeBudIds.length < 2 && parentSeg.parentId) {
         const grandParent = this.SegmentMap.get(parentSeg.parentId);
         if (grandParent && !grandParent.pruned) {
@@ -972,7 +1167,7 @@ export class LivingBonsaiOrganism {
         }
       }
 
-      // 3. Compensatory back-budding on other dormant AXILLARY_LEAF_BUDs if still < 2 woken
+      // 3. Compensatory back-budding on other dormant AXILLARY_LEAF_BUDs
       if (wokeBudIds.length < 2) {
         const extraBuds = this.buds.filter(b => !b.pruned && b.state === 'DORMANT');
         extraBuds.sort((a, b) => {
@@ -987,8 +1182,7 @@ export class LivingBonsaiOrganism {
         }
       }
 
-      // 4. If parentSeg had no remaining buds on itself (e.g. trunk-chopped old wood whose buds were already spent),
-      // form 2 collar axillary/adventitious buds right below the chop scar!
+      // 4. If parentSeg had no remaining buds on itself, form 2 collar buds right below cut
       const activeOnParent = this.buds.filter(
         b => b.parentSegId === parentSeg.id && !b.pruned && b.state === 'SWELLING'
       );
@@ -1131,27 +1325,29 @@ export class LivingBonsaiOrganism {
   }
 
   burstSpringFlush() {
-    const dormant = this.buds.filter(b => !b.pruned && b.state === 'DORMANT');
-    dormant.sort((a, b) => b.generation - a.generation || this.rng() - 0.5);
-    for (let i = 0; i < Math.min(5, dormant.length); i++) {
-      dormant[i].state = 'SWELLING';
-      dormant[i].swell = Math.max(dormant[i].swell, 0.5);
+    this._triggerSpringAwakening(this.getSeasonInfo().year);
+    for (let i = 0; i < 35; i++) {
+      this._stepSubBiology(0.1);
     }
-    this.stepBiology(1.75);
   }
 
   /**
-   * Advances a complete seasonal flush cycle (~25-30 simDays) with bud awakening,
-   * shoot elongation, leaf maturation, and secondary trunk thickening.
+   * Advances simulation to the next season (90 simulation days).
+   * Spring -> Summer -> Autumn -> Winter -> Year+1 Spring!
    */
   advanceSeason() {
-    const dormant = this.buds.filter(b => !b.pruned && b.state === 'DORMANT' && b.generation <= 6);
-    dormant.sort((a, b) => b.generation - a.generation || this.rng() - 0.5);
-    for (let i = 0; i < Math.min(6, dormant.length); i++) {
-      dormant[i].state = 'SWELLING';
-      dormant[i].swell = Math.max(dormant[i].swell, 0.45);
+    const currentDays = Math.round(this.simDays * 100) / 100;
+    const targetDay = (Math.floor((currentDays + 0.05) / 90) + 1) * 90;
+    const daysToAdvance = Math.max(1, targetDay - currentDays);
+
+    const stepDaySize = 1.0;
+    let rem = daysToAdvance;
+    while (rem > 1e-4) {
+      const chunk = Math.min(stepDaySize, rem);
+      this._stepSubBiology(chunk / 0.95);
+      rem -= chunk;
     }
-    this.stepBiology(5.5);
+    this.simDays = targetDay;
   }
 
   collectDescendants(segId, out) {

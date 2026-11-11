@@ -49,8 +49,9 @@ export function createAsciiFontAtlas(THREE = window.THREE) {
 }
 
 /**
- * Creates a custom 5-lobed palmate Japanese Maple leaf BufferGeometry (Acer palmatum)
- * with serrated sawtooth margins, elevated central vein ridge, and vertex colors.
+ * Creates a custom 5-lobed palmate Japanese Maple leaf BufferGeometry (Acer palmatum / Yamamomiji)
+ * with 5 primary radiating lobes + 2 basal spur teeth, deeply incised sinuses,
+ * double-serrate sawtooth margins, elevated dorsal midrib ridge, and vertex colors.
  * @param {object} THREE - Three.js namespace
  * @returns {THREE.BufferGeometry}
  */
@@ -59,17 +60,22 @@ export function createPalmateMapleLeafGeometry(THREE = window.THREE) {
   const normals = [];
   const colors = [];
 
-  // 5 radiating lobes of a Japanese Maple leaf: Basal L/R, Lateral L/R, Central
+  // 5 primary radiating lobes + 2 basal spur lobes of Acer palmatum (Japanese Mountain Maple):
+  // Central (0.0 rad), Lateral L/R (±0.72 rad), Basal L/R (±1.42 rad), Basal Spurs (±1.90 rad)
   const lobes = [
-    { ang: -1.40, len: 0.56, wid: 0.20 },
-    { ang:  1.40, len: 0.56, wid: 0.20 },
-    { ang: -0.70, len: 0.86, wid: 0.25 },
-    { ang:  0.70, len: 0.86, wid: 0.25 },
-    { ang:  0.00, len: 1.00, wid: 0.27 }
+    { ang:  0.00, len: 1.00, wid: 0.25, zArch: 0.040 }, // Central terminal lobe
+    { ang: -0.72, len: 0.86, wid: 0.23, zArch: 0.035 }, // Left lateral lobe
+    { ang:  0.72, len: 0.86, wid: 0.23, zArch: 0.035 }, // Right lateral lobe
+    { ang: -1.42, len: 0.58, wid: 0.18, zArch: 0.025 }, // Left basal lobe
+    { ang:  1.42, len: 0.58, wid: 0.18, zArch: 0.025 }, // Right basal lobe
+    { ang: -1.90, len: 0.28, wid: 0.11, zArch: 0.015 }, // Left basal spur tooth
+    { ang:  1.90, len: 0.28, wid: 0.11, zArch: 0.015 }  // Right basal spur tooth
   ];
 
-  const veinCol = [1.32, 1.38, 1.15]; // Bright midrib vein highlight
-  const edgeCol = [1.12, 1.18, 1.05];
+  const veinCol = [1.34, 1.40, 1.16];        // Luminous midrib / radiating vein ridge
+  const edgeCol = [1.12, 1.18, 1.04];        // Sharp sawtooth margin highlight
+  const laminaCol = [0.96, 1.00, 0.94];      // Leaf blade tissue
+  const petioleBaseCol = [1.25, 0.95, 0.86]; // Warm petiole collar junction
 
   const pushTri = (pA, pB, pC, cA, cB, cC, nX, nY, nZ) => {
     positions.push(...pA, ...pB, ...pC);
@@ -78,7 +84,7 @@ export function createPalmateMapleLeafGeometry(THREE = window.THREE) {
   };
 
   for (const lobe of lobes) {
-    const steps = 6;
+    const steps = 8;
     const cosA = Math.cos(lobe.ang);
     const sinA = Math.sin(lobe.ang);
 
@@ -86,11 +92,12 @@ export function createPalmateMapleLeafGeometry(THREE = window.THREE) {
       const u0 = s / steps;
       const u1 = (s + 1) / steps;
 
-      // Serrated sawtooth width profile
-      const tooth0 = 1.0 + (s % 2 === 1 ? 0.22 : -0.08);
-      const tooth1 = 1.0 + ((s + 1) % 2 === 1 ? 0.22 : -0.08);
-      const w0 = lobe.wid * Math.sin(Math.pow(u0, 0.65) * Math.PI) * tooth0;
-      const w1 = lobe.wid * Math.sin(Math.pow(u1, 0.65) * Math.PI) * tooth1;
+      // Serrated sawtooth width profile with incised sinuses and double-toothed margin
+      const tooth0 = 1.0 + (s % 2 === 1 ? 0.22 : -0.08) + Math.sin(u0 * Math.PI * 4.0) * 0.05;
+      const tooth1 = 1.0 + ((s + 1) % 2 === 1 ? 0.22 : -0.08) + Math.sin(u1 * Math.PI * 4.0) * 0.05;
+
+      const w0 = lobe.wid * Math.sin(Math.pow(u0, 0.68) * Math.PI) * tooth0;
+      const w1 = lobe.wid * Math.sin(Math.pow(u1, 0.68) * Math.PI) * tooth1;
 
       const l0 = u0 * lobe.len;
       const l1 = u1 * lobe.len;
@@ -101,20 +108,36 @@ export function createPalmateMapleLeafGeometry(THREE = window.THREE) {
         return [x, y, zHeight];
       };
 
-      // Central vein ridge is slightly elevated in Z for 3D normal contrast
-      const c0 = toWorld(l0, 0, 0.08);
-      const c1 = toWorld(l1, 0, 0.08);
+      // Elevated central vein ridge with gentle longitudinal dorsal arch for 3D ASCII relief
+      const zMid0 = 0.07 * (1.0 - u0 * 0.5) + lobe.zArch * Math.sin(u0 * Math.PI);
+      const zMid1 = 0.07 * (1.0 - u1 * 0.5) + lobe.zArch * Math.sin(u1 * Math.PI);
+
+      const c0 = toWorld(l0, 0, zMid0);
+      const c1 = toWorld(l1, 0, zMid1);
       const left0 = toWorld(l0, -w0, 0.0);
       const left1 = toWorld(l1, -w1, 0.0);
       const right0 = toWorld(l0, w0, 0.0);
       const right1 = toWorld(l1, w1, 0.0);
 
-      // Left half of lobe segment
-      pushTri(c0, left0, c1, veinCol, edgeCol, veinCol, -0.18, 0.25, 0.95);
-      pushTri(left0, left1, c1, edgeCol, edgeCol, veinCol, -0.18, 0.25, 0.95);
+      // Warm petiole collar tint at base of each lobe
+      const midCol0 = u0 < 0.15 ? petioleBaseCol : veinCol;
+      const midCol1 = u1 < 0.15 ? petioleBaseCol : veinCol;
+      const edCol0 = (s % 2 === 1) ? edgeCol : laminaCol;
+      const edCol1 = ((s + 1) % 2 === 1) ? edgeCol : laminaCol;
+
+      // Left half of lobe segment (angled outward normal catches directional sun light)
+      const nLeftX = -0.22 * cosA - 0.12 * sinA;
+      const nLeftY =  0.22 * sinA - 0.12 * cosA;
+      const nLeftZ =  0.94;
+      pushTri(c0, left0, c1, midCol0, edCol0, midCol1, nLeftX, nLeftY, nLeftZ);
+      pushTri(left0, left1, c1, edCol0, edCol1, midCol1, nLeftX, nLeftY, nLeftZ);
+
       // Right half of lobe segment
-      pushTri(c0, c1, right0, veinCol, veinCol, edgeCol, 0.18, 0.25, 0.85);
-      pushTri(right0, c1, right1, edgeCol, veinCol, edgeCol, 0.18, 0.25, 0.85);
+      const nRightX =  0.22 * cosA - 0.12 * sinA;
+      const nRightY = -0.22 * sinA - 0.12 * cosA;
+      const nRightZ =  0.94;
+      pushTri(c0, c1, right0, midCol0, midCol1, edCol0, nRightX, nRightY, nRightZ);
+      pushTri(right0, c1, right1, edCol0, midCol1, edCol1, nRightX, nRightY, nRightZ);
     }
   }
 

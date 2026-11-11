@@ -173,4 +173,114 @@ console.log('=== DIGITAL BONSAI SYNTHESIZER: BIOLOGICAL & FRACTAL VERIFICATION S
   console.log('[PASS] 4. All 3 species (Maple, Ulmus, Pine) and TRAINED_TRUNK mode verified.');
 }
 
+// 5. Verify Multi-Year 4-Season Cyclical Growth (Year 1 -> Year 2 -> Year 3)
+//    - getSeasonInfo() accuracy (year, seasonIndex, seasonName, monthName, progress, dayOfYear)
+//    - Growth resumes every spring without stalling
+//    - Complete natural leaf abscission (0 active leaves) every winter
+//    - Monotonic trunk caliber thickening across years (r0(Y3) > r0(Y2) > r0(Y1) > 1.4)
+{
+  const maple = new LivingBonsaiOrganism(0x84A3F2, 'BONSAI_MAPLE', 'SEEDLING_SHOOT');
+
+  // Initial state: Year 1 Spring Day 0
+  const initialSeason = maple.getSeasonInfo();
+  assert.strictEqual(initialSeason.year, 1, 'Initial year must be 1');
+  assert.strictEqual(initialSeason.seasonIndex, 0, 'Initial seasonIndex must be 0 (Spring)');
+  assert.strictEqual(initialSeason.seasonName, 'PRIMAVERA', 'Initial seasonName must be PRIMAVERA');
+  assert.strictEqual(initialSeason.monthName, '3月 MAR', 'Initial monthName must be 3月 MAR');
+  assert.strictEqual(initialSeason.dayOfYear, 0, 'Initial dayOfYear must be 0');
+
+  // --- YEAR 1 ---
+  // Advance through Spring to Summer (Day 90)
+  maple.advanceSeason();
+  const y1Summer = maple.getSeasonInfo();
+  assert.strictEqual(y1Summer.year, 1);
+  assert.strictEqual(y1Summer.seasonIndex, 1);
+  assert.strictEqual(y1Summer.seasonName, 'VERANO');
+  assert.ok(maple.leaves.filter(l => !l.pruned).length > 0, 'Summer canopy must have active leaves');
+
+  // Advance to Autumn (Day 180)
+  maple.advanceSeason();
+  const y1Autumn = maple.getSeasonInfo();
+  assert.strictEqual(y1Autumn.year, 1);
+  assert.strictEqual(y1Autumn.seasonIndex, 2);
+  assert.strictEqual(y1Autumn.seasonName, 'OTOÑO');
+
+  // Advance to Winter (Day 270)
+  maple.advanceSeason();
+  const y1Winter = maple.getSeasonInfo();
+  assert.strictEqual(y1Winter.year, 1);
+  assert.strictEqual(y1Winter.seasonIndex, 3);
+  assert.strictEqual(y1Winter.seasonName, 'INVIERNO');
+  const y1ActiveLeaves = maple.leaves.filter(l => !l.pruned).length;
+  assert.strictEqual(y1ActiveLeaves, 0, 'Winter crown must have 0 active leaves (complete deciduous abscission)');
+  const y1R0 = maple.segments[0].r0;
+  const y1ActiveSegs = maple.segments.filter(s => !s.pruned).length;
+  assert.ok(y1R0 > 1.4 * 5.0, `Year 1 trunk caliber (${y1R0.toFixed(2)}) must thicken >5x`);
+
+  // --- YEAR 2 ---
+  // Advance to Year 2 Spring (Day 360)
+  maple.advanceSeason();
+  const y2Spring = maple.getSeasonInfo();
+  assert.strictEqual(y2Spring.year, 2, 'Must roll over into Year 2');
+  assert.strictEqual(y2Spring.seasonIndex, 0);
+  assert.strictEqual(y2Spring.seasonName, 'PRIMAVERA');
+
+  // Step through Spring: verify growth resumes with new spring flush
+  maple.stepBiology(16.0);
+  const y2SpringLeaves = maple.leaves.filter(l => !l.pruned).length;
+  assert.ok(y2SpringLeaves > 0, 'Growth must resume in Year 2 Spring with fresh leaves');
+  const y2SpringSegs = maple.segments.filter(s => !s.pruned).length;
+  assert.ok(y2SpringSegs >= y1ActiveSegs, 'Year 2 Spring must develop new branches');
+
+  // Advance through Year 2 to Winter (Day 630)
+  maple.advanceSeason(); // Summer
+  maple.advanceSeason(); // Autumn
+  maple.advanceSeason(); // Winter
+  const y2Winter = maple.getSeasonInfo();
+  assert.strictEqual(y2Winter.year, 2);
+  assert.strictEqual(y2Winter.seasonIndex, 3);
+  assert.strictEqual(y2Winter.seasonName, 'INVIERNO');
+  assert.strictEqual(maple.leaves.filter(l => !l.pruned).length, 0, 'Year 2 winter crown must have 0 active leaves');
+  const y2R0 = maple.segments[0].r0;
+  const y2ActiveSegs = maple.segments.filter(s => !s.pruned).length;
+  assert.ok(y2R0 > y1R0, `Year 2 caliber (${y2R0.toFixed(2)}) must exceed Year 1 (${y1R0.toFixed(2)})`);
+  assert.ok(y2ActiveSegs > y1ActiveSegs, 'Year 2 active segments must exceed Year 1');
+
+  // --- YEAR 3 ---
+  // Advance to Year 3 Spring (Day 720)
+  maple.advanceSeason();
+  const y3Spring = maple.getSeasonInfo();
+  assert.strictEqual(y3Spring.year, 3, 'Must roll over into Year 3');
+  assert.strictEqual(y3Spring.seasonIndex, 0);
+  assert.strictEqual(y3Spring.seasonName, 'PRIMAVERA');
+
+  // Step through Spring: verify growth resumes again
+  maple.stepBiology(16.0);
+  const y3SpringLeaves = maple.leaves.filter(l => !l.pruned).length;
+  assert.ok(y3SpringLeaves > 0, 'Growth must resume in Year 3 Spring with fresh leaves');
+  const y3SpringSegs = maple.segments.filter(s => !s.pruned).length;
+  assert.ok(y3SpringSegs > y2ActiveSegs, 'Year 3 Spring must expand canopy further');
+
+  // Advance through Year 3 to Winter (Day 990)
+  maple.advanceSeason(); // Summer
+  maple.advanceSeason(); // Autumn
+  maple.advanceSeason(); // Winter
+  const y3Winter = maple.getSeasonInfo();
+  assert.strictEqual(y3Winter.year, 3);
+  assert.strictEqual(y3Winter.seasonIndex, 3);
+  assert.strictEqual(y3Winter.seasonName, 'INVIERNO');
+  assert.strictEqual(maple.leaves.filter(l => !l.pruned).length, 0, 'Year 3 winter crown must have 0 active leaves');
+  const y3R0 = maple.segments[0].r0;
+  const y3ActiveSegs = maple.segments.filter(s => !s.pruned).length;
+
+  console.log(`   -> Multi-Year Trunk Caliber: Initial 1.40 mm -> Y1 ${y1R0.toFixed(2)} mm -> Y2 ${y2R0.toFixed(2)} mm -> Y3 ${y3R0.toFixed(2)} mm`);
+  console.log(`   -> Multi-Year Active Segments: Y1 ${y1ActiveSegs} -> Y2 ${y2ActiveSegs} -> Y3 ${y3ActiveSegs}`);
+
+  // Assert strictly monotonic multi-year caliber growth without stalling
+  assert.ok(y3R0 > y2R0, `Year 3 caliber (${y3R0.toFixed(2)}) must exceed Year 2 (${y2R0.toFixed(2)})`);
+  assert.ok(y3ActiveSegs > y2ActiveSegs, 'Tree must continue growing without stalling');
+
+  console.log('[PASS] 5. Multi-Year 4-Season Cyclical Growth (Y1 -> Y2 -> Y3), winter leaf drop, spring renewal, and monotonic caliber increase verified.');
+}
+
 console.log('\nALL BIOLOGICAL & FRACTAL TESTS PASSED SUCCESSFULLY!');

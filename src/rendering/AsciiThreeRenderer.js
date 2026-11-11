@@ -22,9 +22,9 @@ import {
 
 const THREE = window.THREE;
 
-export const MAX_CYLINDERS = 3500;
-export const MAX_SPHERES = 2500;
-export const MAX_LEAVES = 3500;
+export const MAX_CYLINDERS = 5000;
+export const MAX_SPHERES = 3500;
+export const MAX_LEAVES = 5000;
 
 export class AsciiThreeRenderer {
   /**
@@ -225,7 +225,66 @@ export class AsciiThreeRenderer {
     this._segVec = new THREE.Vector3();
     this._midVec = new THREE.Vector3();
 
+    // Pre-computed resting winter fallen leaves on the moss mound and pot rim lip
+    this._winterFallenLeaves = this._initWinterFallenLeaves();
+
     this.resize(this.viewW, this.viewH);
+  }
+
+  /**
+   * Pre-generates realistic resting fallen Momiji leaves scattered organically
+   * on the domed velvet moss mound and terracotta pot rim lip during winter dormancy.
+   * @returns {Array<object>}
+   */
+  _initWinterFallenLeaves() {
+    const list = [];
+    const rng = (seed) => {
+      let t = (seed + 0x6D2B79F5) | 0;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+
+    // 16 leaves resting organically on the domed moss mound
+    for (let i = 0; i < 16; i++) {
+      const angle = (i / 16) * Math.PI * 2 + (rng(i * 17 + 1) - 0.5) * 0.52;
+      const dist = 16 + rng(i * 31 + 5) * 64; // mm from trunk center
+      const x = Math.sin(angle) * dist;
+      const z = Math.cos(angle) * dist * 0.48 + (rng(i * 43 + 7) - 0.5) * 12;
+      const domeDrop = (dist / 85) * 3.4;
+      const y = -1.6 - domeDrop;
+      const scale = 11.0 + rng(i * 53 + 9) * 4.5;
+      const rotZ = rng(i * 67 + 11) * Math.PI * 2;
+      const rotX = -1.45 + (rng(i * 73 + 13) - 0.5) * 0.22;
+      const rotY = (rng(i * 89 + 17) - 0.5) * 0.35;
+
+      // Varied Momiji senescence color: scarlet, deep crimson, burnt vermilion, golden-amber
+      const colorType = i % 4;
+      const hue = colorType === 0 ? 0.99 : colorType === 1 ? 0.96 : colorType === 2 ? 0.04 : 0.10;
+      const sat = 0.82 + rng(i * 97 + 19) * 0.12;
+      const light = 0.26 + rng(i * 109 + 23) * 0.14;
+
+      list.push({ x, y, z, rotX, rotY, rotZ, scale, hue, sat, light });
+    }
+
+    // 6 leaves resting on the terracotta pot rim lip
+    const rimOffsets = [-92, -84, -76, 74, 82, 90];
+    for (let i = 0; i < rimOffsets.length; i++) {
+      const x = rimOffsets[i] + (rng(i * 37 + 31) - 0.5) * 7;
+      const y = -7.5;
+      const z = 8 + (rng(i * 47 + 37) - 0.5) * 15;
+      const scale = 11.5 + rng(i * 59 + 41) * 3.5;
+      const rotZ = rng(i * 71 + 43) * Math.PI * 2;
+      const rotX = -1.50;
+      const rotY = (rng(i * 83 + 47) - 0.5) * 0.25;
+      const hue = (i % 2 === 0) ? 0.98 : 0.05;
+      const sat = 0.85;
+      const light = 0.29;
+
+      list.push({ x, y, z, rotX, rotY, rotZ, scale, hue, sat, light });
+    }
+
+    return list;
   }
 
   /**
@@ -234,10 +293,10 @@ export class AsciiThreeRenderer {
   _buildPotAndMossMeshes() {
     // Domed green moss mound on top of pot
     const mossGeom = new THREE.CylinderGeometry(96, 102, 10, 24, 1);
-    const mossMat = new THREE.MeshLambertMaterial({ color: 0x56a84c });
-    const mossMesh = new THREE.Mesh(mossGeom, mossMat);
-    mossMesh.position.set(0, -4, -5);
-    this.potGroup.add(mossMesh);
+    this.mossMat = new THREE.MeshLambertMaterial({ color: 0x56a84c });
+    this.mossMesh = new THREE.Mesh(mossGeom, this.mossMat);
+    this.mossMesh.position.set(0, -4, -5);
+    this.potGroup.add(this.mossMesh);
 
     // Terracotta Pot Rim Lip
     const lipGeom = new THREE.CylinderGeometry(108, 106, 6, 24, 1);
@@ -278,24 +337,46 @@ export class AsciiThreeRenderer {
   }
 
   /**
-   * Computes continuous bark RGB color based on segment woodiness (0.0 -> 1.0) and species.
-   * - woodiness = 0.0: bright green / crimson-tipped tender herbaceous shoot
+   * Computes continuous bark RGB color across the 4 seasons based on segment woodiness (0.0 -> 1.0),
+   * species, and seasonal dormancy state.
+   * - woodiness = 0.0: tender shoot (Spring tender reddish-green tint -> Summer emerald -> Autumn olive -> Winter ruby-plum)
    * - woodiness = 0.35: olive / reddish-brown semi-lignified 1st-year twig
-   * - woodiness = 0.75..1.0: mature fissured silver-taupe / grey-brown woody trunk
+   * - woodiness = 0.75..1.0: mature fissured silver-taupe / grey-brown woody trunk (sculptural in winter)
    */
-  _setBarkColor(targetColor, woodiness, species) {
+  _setBarkColor(targetColor, woodiness, species, seasonIndex = 0, seasonProgress = 0.5) {
     const w = Math.max(0, Math.min(1, woodiness || 0));
 
-    // Stage 0: Tender green shoot
-    const r0 = 0.45, g0 = 0.84, b0 = 0.36;
-    // Stage 1 (w ~ 0.35): Olive / reddish-brown young woody twig
-    const r1 = 0.66, g1 = 0.56, b1 = 0.40;
-    // Stage 2 (w -> 1.0): Mature woody trunk bark (species-tuned)
-    let r2 = 0.75, g2 = 0.72, b2 = 0.65; // Acer palmatum silver-taupe bark
-    if (species === 'BONSAI_ULMUS') {
-      r2 = 0.68; g2 = 0.63; b2 = 0.55; // Ulmus warm grey-ochre bark
+    // Stage 0: Tender young shoot (season-tuned for Acer palmatum)
+    let r0 = 0.45, g0 = 0.84, b0 = 0.36;
+    if (seasonIndex === 0) {
+      // Primavera (Spring): young shoots have tender reddish-green tint
+      r0 = 0.62; g0 = 0.78; b0 = 0.32;
+    } else if (seasonIndex === 1) {
+      // Verano (Summer): lush green shoots
+      r0 = 0.38; g0 = 0.82; b0 = 0.32;
+    } else if (seasonIndex === 2) {
+      // Otoño (Autumn): shoots lignify with warm amber-crimson undertones
+      r0 = 0.66; g0 = 0.58; b0 = 0.36;
+    } else if (seasonIndex === 3) {
+      // Invierno (Winter): dormant fine twigs have sculptural ruby-plum / coral-bark luster
+      r0 = 0.72; g0 = 0.38; b0 = 0.36;
+    }
+
+    // Stage 1 (w ~ 0.35): Semi-lignified young woody twig
+    let r1 = 0.66, g1 = 0.56, b1 = 0.40;
+    if (seasonIndex === 3) {
+      r1 = 0.62; g1 = 0.50; b1 = 0.42; // Deep sculptural taupe-brown in winter
+    }
+
+    // Stage 2 (w -> 1.0): Mature woody trunk bark (Acer palmatum silver-taupe)
+    let r2 = 0.75, g2 = 0.72, b2 = 0.65;
+    if (seasonIndex === 3) {
+      // In winter, crisp sculptural silver-taupe trunk against dark background
+      r2 = 0.78; g2 = 0.75; b2 = 0.70;
+    } else if (species === 'BONSAI_ULMUS') {
+      r2 = 0.68; g2 = 0.63; b2 = 0.55;
     } else if (species === 'BONSAI_PINE') {
-      r2 = 0.58; g2 = 0.51; b2 = 0.46; // Pinus thunbergii dark scaly bark
+      r2 = 0.58; g2 = 0.51; b2 = 0.46;
     }
 
     if (w < 0.38) {
@@ -336,7 +417,49 @@ export class AsciiThreeRenderer {
       seasonTheme = 'SPRING'
     } = interactionState;
 
-    // Swap leaf BufferGeometry whenever species changes
+    // 0. Determine Season from biological organism or interaction override
+    const seasonInfo = (typeof bonsai.getSeasonInfo === 'function')
+      ? bonsai.getSeasonInfo()
+      : null;
+
+    let seasonIndex = 0; // 0: Primavera (Spring), 1: Verano (Summer), 2: Otoño (Autumn), 3: Invierno (Winter)
+    let seasonName = 'PRIMAVERA';
+    let seasonProgress = 0.0;
+    let year = 1;
+
+    if (seasonInfo) {
+      seasonIndex = (seasonInfo.seasonIndex !== undefined) ? seasonInfo.seasonIndex : 0;
+      seasonName = seasonInfo.seasonName || ['PRIMAVERA', 'VERANO', 'OTOÑO', 'INVIERNO'][seasonIndex];
+      seasonProgress = (seasonInfo.seasonProgress !== undefined) ? seasonInfo.seasonProgress : 0.0;
+      year = seasonInfo.year || 1;
+    } else if (typeof bonsai.simDays === 'number') {
+      const d = ((bonsai.simDays % 360) + 360) % 360;
+      seasonIndex = Math.floor(d / 90);
+      seasonProgress = (d % 90) / 90;
+      year = Math.floor(bonsai.simDays / 360) + 1;
+      seasonName = ['PRIMAVERA', 'VERANO', 'OTOÑO', 'INVIERNO'][seasonIndex];
+    }
+
+    // UI explicit season override if provided
+    if (interactionState.seasonOverride !== undefined && interactionState.seasonOverride !== null) {
+      seasonIndex = Number(interactionState.seasonOverride) % 4;
+      seasonName = ['PRIMAVERA', 'VERANO', 'OTOÑO', 'INVIERNO'][seasonIndex];
+    }
+
+    // Update moss mound tone according to season
+    if (this.mossMat) {
+      if (seasonIndex === 0) {
+        this.mossMat.color.setRGB(0.34, 0.66, 0.30); // Spring fresh velvet green
+      } else if (seasonIndex === 1) {
+        this.mossMat.color.setRGB(0.24, 0.51, 0.20); // Summer deep emerald
+      } else if (seasonIndex === 2) {
+        this.mossMat.color.setRGB(0.36, 0.45, 0.20); // Autumn warm olive
+      } else {
+        this.mossMat.color.setRGB(0.27, 0.35, 0.22); // Winter cool dormant moss
+      }
+    }
+
+    // Swap leaf BufferGeometry whenever species changes (Acer palmatum primary)
     if (bonsai.species && bonsai.species !== this.currentSpecies) {
       const nextGeom = this.speciesGeometries[bonsai.species] || this.speciesGeometries.BONSAI_MAPLE;
       this.leafInstanced.geometry = nextGeom;
@@ -425,14 +548,14 @@ export class AsciiThreeRenderer {
         const effectiveWoodiness = (seg.type === 'TRUNK' || seg.type === 'TRUNK_HEAD')
           ? Math.max(0.85, seg.woodiness ?? 1.0)
           : (seg.woodiness ?? 0.0);
-        this._setBarkColor(tmpColor, effectiveWoodiness, bonsai.species);
+        this._setBarkColor(tmpColor, effectiveWoodiness, bonsai.species, seasonIndex, seasonProgress);
       }
 
       pushCylinder(seg.x0, seg.y0, seg.z0, curX1, curY1, curZ1, seg.r0, seg.r1, tmpColor);
 
       // Nodal bark ridge on lignified segments so thickened seedling shoots show realistic trunk rings
       if (!isCutHighlight && (seg.woodiness > 0.55 || seg.r0 > 4.0) && seg.curT >= 0.98) {
-        this._setBarkColor(tmpColor, Math.min(1.0, (seg.woodiness || 0.6) + 0.12), bonsai.species);
+        this._setBarkColor(tmpColor, Math.min(1.0, (seg.woodiness || 0.6) + 0.12), bonsai.species, seasonIndex, seasonProgress);
         pushSphere(curX1, curY1, curZ1, seg.r1 * 1.08, Math.max(1.2, seg.r1 * 0.32), seg.r1 * 1.08, tmpColor);
       }
 
@@ -477,6 +600,8 @@ export class AsciiThreeRenderer {
 
     // 4. Axillary Leaf-Buds (AXILLARY_LEAF_BUD) & Collar/Latent Buds
     let activeBudCount = 0;
+    const isDeciduousWinter = (seasonIndex === 3);
+
     if (bonsai.buds) {
       for (const bud of bonsai.buds) {
         if (bud.pruned || bud.state === 'SPENT') continue;
@@ -498,7 +623,7 @@ export class AsciiThreeRenderer {
           pushSphere(bx, by, bz + 2.0, 3.1 * pulse, 3.6 * pulse, 3.1 * pulse, tmpColor);
         } else if (bud.state === 'SWELLING') {
           activeBudCount++;
-          // Glowing crimson-lime swelling bud breaking dormancy!
+          // Spring bud break: glowing crimson-lime swelling bud breaking dormancy!
           const budPhase = typeof bud.id === 'number'
             ? bud.id
             : (parseInt(String(bud.id).replace(/\D+/g, ''), 10) || 0);
@@ -507,8 +632,14 @@ export class AsciiThreeRenderer {
           const r = (2.1 + swell * 2.3) * pulse;
           tmpColor.setRGB(0.96 - swell * 0.22, 0.54 + swell * 0.42, 0.34);
           pushSphere(bx, by, bz + 1.5, r, r * 1.32, r, tmpColor);
+        } else if (isDeciduousWinter) {
+          // Invierno (Winter): dormant winter bud scales visible at each node
+          activeBudCount++;
+          tmpColor.setRGB(0.86, 0.28, 0.30); // Deep ruby-crimson protective perulae / bud scales
+          pushSphere(bx, by, bz, 1.85, 2.35, 1.85, tmpColor);
         } else {
           // Dormant Axillary Leaf-Bud or Latent Collar Bud: warm ruby-amber scale
+          activeBudCount++;
           const isAxillary = bud.type === 'AXILLARY_LEAF_BUD';
           if (isAxillary) {
             tmpColor.setRGB(0.88, 0.46, 0.34);
@@ -522,8 +653,10 @@ export class AsciiThreeRenderer {
     }
 
     // 5. Petioles & Species-Specific Leaf Blades (Maple / Ulmus / Pine)
+    // NOTE: In Invierno (Winter), the crown has ZERO leaves on the branches (all leaves abscised)!
     let activeLeafCount = 0;
-    if (bonsai.leaves) {
+
+    if (!isDeciduousWinter && bonsai.leaves) {
       for (const lf of bonsai.leaves) {
         if (lf.pruned) continue;
         const pSeg = bonsai.SegmentMap ? bonsai.SegmentMap.get(lf.parentSegId) : null;
@@ -545,19 +678,28 @@ export class AsciiThreeRenderer {
         const bladeBaseY = lf.y + Math.cos(pAngle) * curPetioleLen - 1.8 * age;
         const bladeBaseZ = (lf.z || 0) + 4.0 + (lf.side || 1) * 3.0;
 
-        // Slender Reddish-Coral Petiole (highlighted if hovered for defoliation/pruning)
+        // Slender petiole color: tender coral in spring, red in summer, intense scarlet in autumn
         if (isCutHighlight) {
           tmpColor.setRGB(1.0, 0.30, 0.35);
         } else if (isLeafHovered) {
           tmpColor.setRGB(1.0, 0.78, 0.25);
+        } else if (seasonIndex === 0) {
+          tmpColor.setRGB(0.88, 0.36, 0.32); // Spring tender coral-red petiole
+        } else if (seasonIndex === 1) {
+          tmpColor.setRGB(0.82, 0.30, 0.30); // Summer red petiole
         } else {
-          tmpColor.setRGB(0.85, 0.32, 0.32);
+          tmpColor.setRGB(0.92, 0.22, 0.22); // Autumn intense scarlet petiole
         }
         pushCylinder(lf.x, lf.y, lf.z || 0, bladeBaseX, bladeBaseY, bladeBaseZ, 0.65, 0.55, tmpColor);
 
         // Species Leaf Blade Instance
         if (leafIdx < MAX_LEAVES) {
-          const radius = (lf.maxRadius || 16.0) * (0.18 + 0.82 * Math.pow(age, 0.82));
+          // Spring: leaves emerge small and expand as they unfurl
+          let expansion = Math.pow(age, 0.82);
+          if (seasonIndex === 0) {
+            expansion *= Math.min(1.0, 0.35 + 0.65 * (seasonProgress / 0.60));
+          }
+          const radius = (lf.maxRadius || 16.0) * (0.18 + 0.82 * expansion);
           dummyObj.position.set(bladeBaseX, bladeBaseY, bladeBaseZ);
           dummyObj.rotation.set(0.22, (lf.tiltZ || 0) * 0.35, -pAngle);
           dummyObj.scale.set(radius, radius, radius);
@@ -572,21 +714,68 @@ export class AsciiThreeRenderer {
           } else if (isLeafHovered) {
             // Bright amber-cyan highlight in PINCH / Mekiri defoliation mode
             tmpColor.setRGB(1.0, 0.76, 0.24);
-          } else if (seasonTheme === 'AUTUMN' && bonsai.species !== 'BONSAI_PINE') {
-            // Autumn Momiji crimson & fiery orange (or golden yellow on Ulmus)
-            const baseAutumnHue = bonsai.species === 'BONSAI_ULMUS' ? 0.09 : 0.03;
-            tmpColor.setHSL(baseAutumnHue + hueOff, 0.88, 0.32 + shade * 0.24);
-          } else if (age < 0.38 && bonsai.species !== 'BONSAI_PINE') {
-            // Newly sprouted spring leaf: warm bronze-red / apricot transition to lime
-            const bronzeMix = 1.0 - (age / 0.38);
-            const hue = 0.05 * bronzeMix + (0.29 + hueOff) * (1.0 - bronzeMix);
-            tmpColor.setHSL(hue, 0.82, 0.36 + shade * 0.22);
-          } else {
-            // Mature lush emerald green canopy with depth layering
-            const baseHue = bonsai.species === 'BONSAI_PINE' ? 0.36 : 0.31;
-            const sat = bonsai.species === 'BONSAI_PINE' ? 0.68 : 0.78;
-            const light = 0.24 + shade * 0.30;
-            tmpColor.setHSL(baseHue + hueOff, sat, light);
+          } else if (seasonIndex === 0) {
+            // ==========================================
+            // 🌸 PRIMAVERA (Spring)
+            // Leaves emerge small with bronze-red/apricot hues, unfurling to vibrant yellow-green/lime
+            // ==========================================
+            const unfurlFrac = Math.min(1.0, Math.max(0.0, age * 0.65 + seasonProgress * 0.55));
+            if (unfurlFrac < 0.42) {
+              // Bronze-red / apricot newly unfurled leaf protected by anthocyanins
+              const apricotMix = unfurlFrac / 0.42;
+              const hue = 0.03 + apricotMix * 0.05; // 0.03 (bronze-red) -> 0.08 (apricot)
+              tmpColor.setHSL(hue, 0.85, 0.36 + shade * 0.20);
+            } else {
+              // Unfurling to vibrant yellow-green / lime
+              const limeMix = (unfurlFrac - 0.42) / 0.58;
+              const hue = 0.08 * (1.0 - limeMix) + (0.28 + hueOff) * limeMix;
+              tmpColor.setHSL(hue, 0.84, 0.32 + shade * 0.26);
+            }
+          } else if (seasonIndex === 1) {
+            // ==========================================
+            // ☀️ VERANO (Summer)
+            // Full canopy of deep lush emerald green leaves. High contrast, vigorous appearance.
+            // ==========================================
+            const baseHue = 0.33 + hueOff; // Lush emerald forest green
+            const sat = 0.90;
+            const light = 0.22 + shade * 0.26; // High contrast between sun canopy & deep interior
+            tmpColor.setHSL(baseHue, sat, light);
+          } else if (seasonIndex === 2) {
+            // ==========================================
+            // 🍁 OTOÑO (Autumn - Momiji)
+            // Leaves smoothly transition into stunning Momiji autumn foliage — vivid scarlet,
+            // fiery crimson, deep vermilion, orange, and golden-amber. Individual variance in senescence.
+            // ==========================================
+            const leafIdNum = typeof lf.id === 'number'
+              ? lf.id
+              : (parseInt(String(lf.id).replace(/\D+/g, ''), 10) || 0);
+            const varVal = (Math.abs(Math.sin(leafIdNum * 12.9898 + lf.x * 0.17 + lf.y * 0.23)) * 1000) % 1;
+            const senProgress = Math.max(0.0, Math.min(1.0, seasonProgress * 1.35 - varVal * 0.32));
+
+            if (senProgress < 0.25) {
+              // Early autumn: emerald green transitioning into chartreuse and golden-amber tips
+              const t = senProgress / 0.25;
+              const hue = 0.32 * (1.0 - t) + 0.13 * t; // green -> amber
+              tmpColor.setHSL(hue + hueOff, 0.88, 0.26 + shade * 0.24);
+            } else {
+              // Peak Momiji: individual leaves turn vivid scarlet, fiery crimson, vermilion or golden amber
+              const colorType = Math.floor(varVal * 4.0);
+              let peakHue;
+              if (colorType === 0) {
+                peakHue = 0.99; // Vivid Scarlet (ruby-red)
+              } else if (colorType === 1) {
+                peakHue = 0.96; // Fiery Crimson
+              } else if (colorType === 2) {
+                peakHue = 0.04; // Deep Vermilion / Flame Orange
+              } else {
+                peakHue = 0.10; // Glowing Golden-Amber
+              }
+              const t = (senProgress - 0.25) / 0.75;
+              const curHue = (0.13 * (1.0 - t) + peakHue * t) % 1.0;
+              const sat = 0.88 + varVal * 0.08;
+              const light = 0.30 + shade * 0.22;
+              tmpColor.setHSL(curHue, sat, light);
+            }
           }
 
           this.leafInstanced.setColorAt(leafIdx, tmpColor);
@@ -595,8 +784,32 @@ export class AsciiThreeRenderer {
       }
     }
 
-    // 6. Falling Pruned Clippings & Abscised Old Trunk Leaves Animation
+    // 6. Resting Fallen Momiji Leaves on the Velvet Moss and Pot Rim Lip (Winter & Late Autumn)
+    if (isDeciduousWinter || (seasonIndex === 2 && seasonProgress > 0.70)) {
+      const winterOpacity = isDeciduousWinter
+        ? 1.0
+        : Math.min(1.0, (seasonProgress - 0.70) / 0.25);
+
+      for (const fl of this._winterFallenLeaves) {
+        if (leafIdx >= MAX_LEAVES) break;
+        dummyObj.position.set(fl.x, fl.y, fl.z);
+        dummyObj.rotation.set(fl.rotX, fl.rotY, fl.rotZ);
+        dummyObj.scale.set(fl.scale, fl.scale, fl.scale);
+        dummyObj.updateMatrix();
+        this.leafInstanced.setMatrixAt(leafIdx, dummyObj.matrix);
+
+        tmpColor.setHSL(fl.hue, fl.sat, fl.light * (0.85 + 0.15 * winterOpacity));
+        this.leafInstanced.setColorAt(leafIdx, tmpColor);
+        leafIdx++;
+      }
+    }
+
+    // 7. Falling Pruned Clippings & Abscised Old Leaves Animation
     if (bonsai.fallingClips) {
+      // Keep falling clips pool bounded for 60-120 FPS performance during high-speed time jumps
+      if (bonsai.fallingClips.length > 60) {
+        bonsai.fallingClips.splice(0, bonsai.fallingClips.length - 60);
+      }
       for (let i = bonsai.fallingClips.length - 1; i >= 0; i--) {
         const clip = bonsai.fallingClips[i];
         clip.x += clip.vx || 0;
@@ -614,7 +827,11 @@ export class AsciiThreeRenderer {
           dummyObj.scale.set(clipScale, clipScale, clipScale);
           dummyObj.updateMatrix();
           this.leafInstanced.setMatrixAt(leafIdx, dummyObj.matrix);
-          tmpColor.setRGB(0.95 * clip.alpha, 0.42 * clip.alpha, 0.36 * clip.alpha);
+          if (seasonIndex === 2 || seasonIndex === 3) {
+            tmpColor.setRGB(0.95 * clip.alpha, 0.32 * clip.alpha, 0.26 * clip.alpha);
+          } else {
+            tmpColor.setRGB(0.88 * clip.alpha, 0.72 * clip.alpha, 0.35 * clip.alpha);
+          }
           this.leafInstanced.setColorAt(leafIdx, tmpColor);
           leafIdx++;
         }
@@ -641,7 +858,11 @@ export class AsciiThreeRenderer {
       activeBudCount,
       activeLeafCount,
       activeBranchCount,
-      trunkCaliberMm
+      trunkCaliberMm,
+      seasonIndex,
+      seasonName,
+      seasonProgress,
+      year
     };
   }
 
